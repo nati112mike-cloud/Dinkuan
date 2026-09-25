@@ -9,10 +9,10 @@
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "test:e2e": "pnpm --filter @dinkuan/web exec playwright test",
-    "db:generate": "pnpm --filter @dinkuan/db generate",
-    "db:migrate": "pnpm --filter @dinkuan/db migrate",
-    "db:deploy": "pnpm --filter @dinkuan/db deploy",
-    "db:seed": "pnpm --filter @dinkuan/db seed",
+    "db:generate": "pnpm --filter @dinkuan/db run generate",
+    "db:migrate": "pnpm --filter @dinkuan/db run migrate",
+    "db:deploy": "pnpm --filter @dinkuan/db run migrate:deploy",
+    "db:seed": "pnpm --filter @dinkuan/db run seed",
     "format": "prettier --write ."
   },
   "devDependencies": {

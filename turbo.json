@@ -1,0 +1,11 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "globalEnv": ["DATABASE_URL", "APP_URL", "SESSION_SECRET", "KEY_ENCRYPTION_SECRET", "DEMO_MODE", "PAYMENT_WEBHOOK_SECRET"],
+  "tasks": {
+    "build": { "dependsOn": ["^build"], "outputs": [".next/**", "!.next/cache/**", "dist/**"] },
+    "dev": { "cache": false, "persistent": true },
+    "lint": {},
+    "typecheck": {},
+    "test": { "cache": false }
+  }
+}

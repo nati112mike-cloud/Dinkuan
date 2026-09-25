@@ -1,0 +1,9 @@
+{
+  "name": "ድንኳን · Dinkuan",
+  "short_name": "ድንኳን",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#fdf6ee",
+  "theme_color": "#a94a12",
+  "icons": [{ "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }]
+}

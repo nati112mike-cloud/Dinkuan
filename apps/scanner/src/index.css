@@ -1,0 +1,13 @@
+@import "tailwindcss";
+
+@theme {
+  --color-tent-100: #f9e6cf;
+  --color-tent-500: #c9621b;
+  --color-tent-600: #a94a12;
+  --color-ink: #1c1410;
+}
+
+body {
+  background: var(--color-ink);
+  font-family: "Noto Sans Ethiopic", "Noto Sans", system-ui, sans-serif;
+}

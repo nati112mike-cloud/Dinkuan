@@ -25,7 +25,12 @@ export type ErrorCode =
   | "RATE_LIMITED"
   | "UPLOAD_TOO_LARGE"
   | "UPLOAD_TYPE"
-  | "UPLOAD_INCOMPLETE";
+  | "UPLOAD_INCOMPLETE"
+  | "DATE_UNAVAILABLE"
+  | "COMPARE_LIMIT"
+  | "TARGET_NOT_ALLOWED"
+  | "CAMPAIGN_STATE"
+  | "REFUND_FAILED";
 
 export class DomainError extends Error {
   constructor(

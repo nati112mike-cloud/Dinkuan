@@ -4,6 +4,8 @@ export * from "./sms";
 export * from "./auth";
 export * from "./gateways";
 export * from "./signing-keys";
+export * from "./ledger";
 export * from "./orders";
+export * from "./promotions";
 export * from "./scanner";
 export * from "./audit";

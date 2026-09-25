@@ -1,10 +1,19 @@
 import "server-only";
 import { cookies, headers } from "next/headers";
-import { userForSession } from "@dinkuan/core/server";
+import { SESSION_TTL_MS, userForSession } from "@dinkuan/core/server";
 import { DEFAULT_LANG, isLang, translator, type Lang } from "@dinkuan/i18n";
 
 export const SESSION_COOKIE = "dk_session";
 export const LANG_COOKIE = "dk_lang";
+
+/** Cookie settings for a new login session (OTP login and Telegram sign-in links). */
+export const SESSION_COOKIE_OPTIONS = {
+  httpOnly: true,
+  sameSite: "lax" as const,
+  secure: process.env.NODE_ENV === "production",
+  path: "/",
+  maxAge: SESSION_TTL_MS / 1000,
+};
 
 /** Current user from the session cookie, or from a Bearer token (scanner app). */
 export async function currentUser() {

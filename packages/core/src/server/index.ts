@@ -13,3 +13,5 @@ export * from "./organisers";
 export * from "./event-admin";
 export * from "./dashboard";
 export * from "./admin";
+export * from "./outbox";
+export * from "./telegram";

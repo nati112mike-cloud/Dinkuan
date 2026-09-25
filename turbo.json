@@ -1,6 +1,6 @@
 {
   "$schema": "https://turbo.build/schema.json",
-  "globalEnv": ["DATABASE_URL", "APP_URL", "SESSION_SECRET", "KEY_ENCRYPTION_SECRET", "DEMO_MODE", "PAYMENT_WEBHOOK_SECRET"],
+  "globalEnv": ["DATABASE_URL", "APP_URL", "SESSION_SECRET", "KEY_ENCRYPTION_SECRET", "DEMO_MODE", "PAYMENT_WEBHOOK_SECRET", "TELEGRAM_BOT_TOKEN", "TELEGRAM_WEBHOOK_SECRET", "TELEGRAM_BOT_USERNAME"],
   "tasks": {
     "build": { "dependsOn": ["^build"], "outputs": [".next/**", "!.next/cache/**", "dist/**"] },
     "dev": { "cache": false, "persistent": true },

@@ -1,0 +1,30 @@
+{
+  "name": "@dinkuan/bot",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "dev": "tsx --env-file-if-exists=../web/.env.local --env-file-if-exists=../../.env src/dev.ts",
+    "set-webhook": "tsx --env-file-if-exists=../web/.env.local --env-file-if-exists=../../.env src/set-webhook.ts",
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dinkuan/core": "workspace:*",
+    "@dinkuan/db": "workspace:*",
+    "@dinkuan/i18n": "workspace:*",
+    "grammy": "^1.46.0",
+    "qrcode": "^1.5.4",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/qrcode": "^1.5.6",
+    "tsx": "^4.20.0",
+    "vitest": "^4.0.0"
+  }
+}

@@ -1,5 +1,6 @@
 import { startCheckout } from "@dinkuan/core/server";
 import { z } from "zod";
+import { clickedCampaign } from "@/lib/ads";
 import { fail, handleError, ok, parseJson } from "@/lib/api";
 import { currentUser } from "@/lib/session";
 
@@ -14,7 +15,7 @@ export async function POST(req: Request) {
     const user = await currentUser();
     if (!user) return fail("UNAUTHENTICATED");
     const body = await parseJson(req, schema);
-    const { order, checkoutUrl } = await startCheckout({ userId: user.id, ...body });
+    const { order, checkoutUrl } = await startCheckout({ userId: user.id, ...body, campaignId: await clickedCampaign() });
     return ok({ orderId: order.id, checkoutUrl: checkoutUrl ?? `/orders/${order.id}` });
   } catch (e) {
     return handleError(e);

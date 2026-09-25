@@ -32,7 +32,13 @@ export function Feed({
     const sep = endpoint.includes("?") ? "&" : "?";
     const r = await api<FeedPageDTO>(`${endpoint}${sep}cursor=${encodeURIComponent(cursor)}`);
     if (r.ok) {
-      setItems((prev) => [...prev, ...r.data.items.filter((p) => !prev.some((x) => x.id === p.id))]);
+      // Keep one copy of each post; a promotion already shown isn't repeated on the next page.
+      setItems((prev) => [
+        ...prev,
+        ...r.data.items.filter((p) =>
+          p.sponsored ? !prev.some((x) => x.sponsored?.campaignId === p.sponsored!.campaignId) : !prev.some((x) => x.id === p.id && !x.sponsored),
+        ),
+      ]);
       setCursor(r.data.nextCursor);
     }
     setLoading(false);
@@ -50,7 +56,7 @@ export function Feed({
   return (
     <div className="space-y-4">
       {items.map((p) => (
-        <PostCard key={p.id} post={p} lang={lang} loggedIn={loggedIn} />
+        <PostCard key={p.sponsored ? `ad-${p.sponsored.campaignId}` : p.id} post={p} lang={lang} loggedIn={loggedIn} />
       ))}
       <div ref={sentinel} />
       {cursor ? (

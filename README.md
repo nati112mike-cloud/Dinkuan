@@ -22,7 +22,8 @@ Demo accounts (code `123456`):
 | 0911000001 | Buyer (Hanna, @hanna.t, follows a few creators) |
 | 0911000002 | Gate scanner for both demo organisers |
 | 0911000003 | Organiser (Addis Nights Entertainment) |
-| 0911000004 | Admin |
+| 0911000004 | Admin (ad review at /admin/ads) |
+| 0911100001 | Pro DJ (DJ Kaleb, @djkaleb): vendor dashboard, requests and chat |
 
 ## Run it locally
 
@@ -37,7 +38,7 @@ pnpm db:deploy && pnpm db:seed
 pnpm dev                                  # web on :3000, scanner on :5173
 ```
 
-Re-run `pnpm db:seed` any time: it moves the demo events so "Tonight" and "This weekend" always have something on, and moves the demo posts forward so the feed looks fresh. The seed includes 16 fictional Addis creators, posts, placeholder reels and event Moments.
+Re-run `pnpm db:seed` any time: it moves the demo events so "Tonight" and "This weekend" always have something on, and moves the demo posts forward so the feed looks fresh. The seed includes 16 fictional Addis creators, posts, placeholder reels and event Moments, 12 pros to hire with packages and calendars, and 3 live promotions.
 
 Hosting the demo online: see `docs/DEPLOY.md`.
 

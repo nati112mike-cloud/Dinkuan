@@ -12,6 +12,7 @@ import { Caption } from "./Caption";
 import { ReportSheet } from "./ReportSheet";
 import { ShareSheet } from "./ShareSheet";
 import { Sheet, SheetButton } from "./Sheet";
+import { adClickHref, AdView, SponsoredLabel } from "./Sponsored";
 
 export function PostCard({ post, lang, loggedIn, detail = false }: { post: PostDTO; lang: Lang; loggedIn: boolean; detail?: boolean }) {
   const t = translator(lang);
@@ -69,7 +70,7 @@ export function PostCard({ post, lang, loggedIn, detail = false }: { post: PostD
   const author = post.author;
   const statusNote = post.isMine && post.status !== "public";
 
-  return (
+  const card = (
     <article className="overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-tent-100" data-testid="post">
       <header className="flex items-center gap-3 p-3">
         <Link href={`/u/${author.username}`} className="shrink-0">
@@ -84,6 +85,7 @@ export function PostCard({ post, lang, loggedIn, detail = false }: { post: PostD
               </span>
             )}
           </Link>
+          {post.sponsored && <SponsoredLabel />}
           <p className="truncate text-xs text-stone-500">
             @{author.username} · <time dateTime={post.createdAt}>{timeAgo(post.createdAt, lang)}</time>
             {edited && ` · ${t("post.edited")}`}
@@ -199,6 +201,14 @@ export function PostCard({ post, lang, loggedIn, detail = false }: { post: PostD
         )}
         {error && <p className="text-sm text-red-600">{error}</p>}
       </div>
+      {post.sponsored && (
+        <a
+          href={adClickHref(post.sponsored.campaignId, post.sponsored.placement)}
+          className="tap flex items-center justify-between border-t border-tent-100 px-4 text-sm font-bold text-tent-700"
+        >
+          {t("ads.learnMore")} <span aria-hidden>→</span>
+        </a>
+      )}
 
       <Sheet open={menu === "picker"} onClose={() => setMenu(null)} title={t("post.react")}>
         <div className="flex justify-between gap-1">
@@ -231,6 +241,9 @@ export function PostCard({ post, lang, loggedIn, detail = false }: { post: PostD
             >
               ✏️ {t("post.edit")}
             </SheetButton>
+            {post.status === "public" && post.audience === "public" && (
+              <SheetButton onClick={() => router.push(`/promote?type=post&id=${post.id}`)}>📣 {t("promote.cta")}</SheetButton>
+            )}
             <SheetButton
               danger
               onClick={async () => {
@@ -282,6 +295,13 @@ export function PostCard({ post, lang, loggedIn, detail = false }: { post: PostD
         onShared={() => setShareCount((c) => c + 1)}
       />
     </article>
+  );
+  return post.sponsored ? (
+    <AdView campaignId={post.sponsored.campaignId} placement={post.sponsored.placement}>
+      {card}
+    </AdView>
+  ) : (
+    card
   );
 }
 

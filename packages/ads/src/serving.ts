@@ -97,12 +97,15 @@ export async function sponsoredEvents(
   if (!campaigns.length || limit <= 0) return [];
   const events = await prisma.event.findMany({
     where: { id: { in: campaigns.map((c) => c.targetId) }, status: "published", startsAt: { gt: now } },
-    include: { venue: true, ticketTypes: { where: { visibility: "public" }, orderBy: { priceSantim: "asc" } } },
+    include: { venue: true, organiser: true, ticketTypes: { orderBy: { sortOrder: "asc" } } },
   });
   const byId = new Map(events.map((e) => [e.id, e]));
+  const seen = new Set<string>();
   return campaigns
     .map((c) => ({ campaignId: c.id, event: byId.get(c.targetId) }))
     .filter((x): x is { campaignId: string; event: NonNullable<typeof x.event> } => !!x.event)
+    // Two promotions for the same event never fill two slots at once.
+    .filter((x) => !seen.has(x.event.id) && !!seen.add(x.event.id))
     .slice(0, limit);
 }
 

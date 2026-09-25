@@ -4,13 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { translator, type Lang, type MessageKey } from "@dinkuan/i18n";
 
-// PRD 6 main navigation (Hire joins in the marketplace milestone; profile and notifications are in the header).
+// PRD 6 main navigation. Tickets live at the top of Events and in the profile menu; profile and notifications are in the header.
 const items: { href: string; key: MessageKey; icon: string }[] = [
   { href: "/", key: "nav.home", icon: "🏠" },
   { href: "/reels", key: "nav.reels", icon: "🎬" },
   { href: "/create", key: "nav.create", icon: "➕" },
   { href: "/events", key: "nav.events", icon: "🎟" },
-  { href: "/tickets", key: "nav.tickets", icon: "🎫" },
+  { href: "/hire", key: "nav.hire", icon: "🎧" },
 ];
 
 export function BottomNav({ lang }: { lang: Lang }) {

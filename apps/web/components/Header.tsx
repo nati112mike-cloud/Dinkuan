@@ -4,14 +4,14 @@ import type { ProfileDTO } from "@/lib/social-types";
 import { Avatar } from "./Avatar";
 import { LangToggle } from "./LangToggle";
 
-export function Header({ lang, me, unread }: { lang: Lang; me: ProfileDTO | null; unread: number }) {
+export function Header({ lang, me, unread, inbox = 0 }: { lang: Lang; me: ProfileDTO | null; unread: number; inbox?: number }) {
   const t = translator(lang);
   return (
     <header className="sticky top-0 z-20 border-b border-tent-100 bg-tent-50/95 backdrop-blur">
       <div className="mx-auto flex h-[60px] max-w-2xl items-center justify-between px-4">
         <Link href="/" className="tap flex items-center gap-2">
           <span className="grid h-9 w-9 place-items-center rounded-xl bg-tent-600 text-lg font-bold text-white">ድ</span>
-          <span className="text-xl font-extrabold text-tent-700">ድንኳን</span>
+          <span className="hidden text-xl font-extrabold text-tent-700 min-[380px]:inline">ድንኳን</span>
         </Link>
         <div className="flex items-center gap-1">
           <LangToggle lang={lang} />
@@ -20,6 +20,14 @@ export function Header({ lang, me, unread }: { lang: Lang; me: ProfileDTO | null
           </Link>
           {me ? (
             <>
+              <Link href="/inbox" className="tap relative grid place-items-center rounded-full text-lg" aria-label={t("inbox.title")}>
+                💬
+                {inbox > 0 && (
+                  <span className="absolute right-0.5 top-1 grid h-5 min-w-5 place-items-center rounded-full bg-red-600 px-1 text-[11px] font-bold text-white">
+                    {inbox > 9 ? "9+" : inbox}
+                  </span>
+                )}
+              </Link>
               <Link href="/notifications" className="tap relative grid place-items-center rounded-full text-lg" aria-label={t("nav.notifications")}>
                 🔔
                 {unread > 0 && (

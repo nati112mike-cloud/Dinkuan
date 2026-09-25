@@ -36,6 +36,10 @@ export type PostDTO = {
   myReaction: string | null;
   saved: boolean;
   isMine: boolean;
+  /** Set when this post is shown as a promotion (F21-AC6: always labelled). */
+  sponsored?: SponsoredDTO | null;
 };
+
+export type SponsoredDTO = { campaignId: string; placement: "feed" | "reels" | "events_featured" | "home_weekend" | "search_top" };
 
 export type FeedPageDTO = { items: PostDTO[]; nextCursor: string | null };

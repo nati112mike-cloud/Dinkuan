@@ -12,7 +12,7 @@
     "db:generate": "pnpm --filter @dinkuan/db run generate",
     "db:migrate": "pnpm --filter @dinkuan/db run migrate",
     "db:deploy": "pnpm --filter @dinkuan/db run migrate:deploy",
-    "db:seed": "pnpm --filter @dinkuan/db run seed && pnpm --filter @dinkuan/social run seed",
+    "db:seed": "pnpm --filter @dinkuan/db run seed && pnpm --filter @dinkuan/social run seed && pnpm --filter @dinkuan/marketplace run seed && pnpm --filter @dinkuan/ads run seed",
     "format": "prettier --write ."
   },
   "devDependencies": {

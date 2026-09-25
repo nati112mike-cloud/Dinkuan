@@ -10,6 +10,7 @@ import type { FeedPageDTO, PostDTO } from "@/lib/social-types";
 import { Avatar } from "./Avatar";
 import { Caption } from "./Caption";
 import { ShareSheet } from "./ShareSheet";
+import { adClickHref, SponsoredLabel } from "./Sponsored";
 
 /**
  * F16-AC7/AC8: full-screen vertical reels. Autoplays muted with a tap to unmute, loops, shows
@@ -29,7 +30,12 @@ export function ReelsPlayer({ initial, lang, loggedIn, lowData }: { initial: Fee
     loading.current = true;
     const r = await api<FeedPageDTO>(`/api/reels?cursor=${encodeURIComponent(cursor)}`);
     if (r.ok) {
-      setItems((prev) => [...prev, ...r.data.items.filter((p) => !prev.some((x) => x.id === p.id))]);
+      setItems((prev) => [
+        ...prev,
+        ...r.data.items.filter((p) =>
+          p.sponsored ? !prev.some((x) => x.sponsored?.campaignId === p.sponsored!.campaignId) : !prev.some((x) => x.id === p.id && !x.sponsored),
+        ),
+      ]);
       setCursor(r.data.nextCursor);
     }
     loading.current = false;
@@ -50,7 +56,7 @@ export function ReelsPlayer({ initial, lang, loggedIn, lowData }: { initial: Fee
         <div className="no-scrollbar h-full snap-y snap-mandatory overflow-y-scroll" data-testid="reels">
           {items.map((p, i) => (
             <Reel
-              key={p.id}
+              key={p.sponsored ? `ad-${p.sponsored.campaignId}` : p.id}
               post={p}
               lang={lang}
               loggedIn={loggedIn}
@@ -103,6 +109,18 @@ function Reel({
   const watched = useRef({ ms: 0, last: 0, completed: false, sent: false });
   const lastTap = useRef(0);
   const media = post.media[0];
+  const adSeen = useRef(false);
+
+  // F21: a sponsored reel counts an impression after a second on screen (capped server-side).
+  useEffect(() => {
+    if (!isActive || !post.sponsored || adSeen.current) return;
+    const { campaignId, placement } = post.sponsored;
+    const timer = setTimeout(() => {
+      adSeen.current = true;
+      void api("/api/ads/impression", { body: { campaignId, placement } });
+    }, 1000);
+    return () => clearTimeout(timer);
+  }, [isActive, post.sponsored]);
   const src = media ? (lowData && media.lowUrl ? media.lowUrl : media.url) : "";
 
   useEffect(() => {
@@ -253,7 +271,8 @@ function Reel({
       </div>
 
       <div className="absolute bottom-6 left-0 right-16 space-y-1 bg-gradient-to-t from-black/70 to-transparent px-4 pb-2 pt-10">
-        <Link href={`/u/${post.author.username}`} className="font-bold">
+        {post.sponsored && <SponsoredLabel />}
+        <Link href={`/u/${post.author.username}`} className="block font-bold">
           @{post.author.username}
           {post.author.isVerified && <span className="ml-1 text-sky-400">✓</span>}
         </Link>
@@ -266,6 +285,14 @@ function Reel({
             </Link>
           )}
         </div>
+        {post.sponsored && (
+          <a
+            href={adClickHref(post.sponsored.campaignId, post.sponsored.placement)}
+            className="tap mt-1 grid place-items-center rounded-xl bg-white text-sm font-bold text-ink"
+          >
+            {t("ads.learnMore")} →
+          </a>
+        )}
       </div>
       <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20" aria-hidden>
         <div className="h-full bg-white" style={{ width: `${progress * 100}%` }} />

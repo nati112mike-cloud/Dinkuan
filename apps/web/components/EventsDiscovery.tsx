@@ -1,8 +1,11 @@
 import Link from "next/link";
 import type { Lang } from "@dinkuan/i18n";
 import { translator } from "@dinkuan/i18n";
+import { sponsoredEvents } from "@dinkuan/ads";
 import { EventCard } from "@/components/EventCard";
+import { viewerKey } from "@/lib/ads";
 import { CATEGORIES, findEvents } from "@/lib/events";
+import { currentUser } from "@/lib/session";
 
 function Row({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
   return (
@@ -21,12 +24,20 @@ function Row({ title, href, children }: { title: string; href: string; children:
 /** F4: event discovery rows (the Events tab and the events page). */
 export async function EventsDiscovery({ lang }: { lang: Lang }) {
   const t = translator(lang);
-  const [featured, tonight, weekend, upcoming] = await Promise.all([
+  const user = await currentUser();
+  const key = await viewerKey(user?.id ?? null);
+  const [featured, tonight, weekend, upcoming, takeover, spotlight] = await Promise.all([
     findEvents({ featured: true, limit: 6 }),
     findEvents({ date: "today", limit: 8 }),
     findEvents({ date: "weekend", limit: 8 }),
     findEvents({ limit: 12 }),
+    // F21-AC3: "Weekend Takeover" tops the page; "Event Spotlight" leads the Featured row.
+    sponsoredEvents("home_weekend", key, 1),
+    sponsoredEvents("events_featured", key, 2),
   ]);
+  const top = takeover[0];
+  const spot = spotlight.filter((s) => s.event.id !== top?.event.id);
+  const featuredRest = featured.filter((e) => !spot.some((s) => s.event.id === e.id) && e.id !== top?.event.id);
   return (
     <div className="space-y-8">
       <form action="/events" className="relative">
@@ -40,9 +51,26 @@ export async function EventsDiscovery({ lang }: { lang: Lang }) {
         </span>
       </form>
 
-      {featured.length > 0 && (
+      {user && (
+        <Link href="/tickets" className="tap flex items-center justify-between rounded-2xl bg-white px-4 font-semibold ring-1 ring-tent-100">
+          <span>🎫 {t("nav.tickets")}</span>
+          <span aria-hidden>→</span>
+        </Link>
+      )}
+
+      {top && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-extrabold">{t("home.weekend")}</h2>
+          <EventCard event={top.event} lang={lang} sponsored={{ campaignId: top.campaignId, placement: "home_weekend" }} />
+        </section>
+      )}
+
+      {featuredRest.length + spot.length > 0 && (
         <Row title={t("home.featured")} href="/events">
-          {featured.map((e) => (
+          {spot.map((s) => (
+            <EventCard key={`ad-${s.campaignId}`} event={s.event} lang={lang} wide sponsored={{ campaignId: s.campaignId, placement: "events_featured" }} />
+          ))}
+          {featuredRest.map((e) => (
             <EventCard key={e.id} event={e} lang={lang} wide />
           ))}
         </Row>

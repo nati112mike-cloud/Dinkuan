@@ -8,9 +8,10 @@
     "./text": "./src/text.ts"
   },
   "scripts": {
-    "lint": "eslint src test",
+    "lint": "eslint src test seed",
     "typecheck": "tsc -p tsconfig.json",
-    "test": "vitest run"
+    "test": "vitest run",
+    "seed": "tsx seed/seed-ads.ts"
   },
   "dependencies": {
     "@dinkuan/core": "workspace:*",
@@ -22,6 +23,7 @@
     "@types/node": "^22.0.0",
     "vitest": "^4.0.0",
     "@dinkuan/marketplace": "workspace:*",
-    "@dinkuan/payments": "workspace:*"
+    "@dinkuan/payments": "workspace:*",
+    "tsx": "^4.20.0"
   }
 }

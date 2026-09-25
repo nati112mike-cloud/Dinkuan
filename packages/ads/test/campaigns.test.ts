@@ -45,6 +45,8 @@ describe("F21 promotion packages", () => {
     expect(r).toEqual({ low: 1000, high: 2300 });
     const slot = estimatedReach({ impressions: null, days: 7, placements: ["events_featured"] });
     expect(slot.high).toBeGreaterThan(slot.low);
+    const weekend = estimatedReach({ impressions: null, days: 3, placements: ["home_weekend"] });
+    expect(weekend.high).toBeGreaterThan(weekend.low);
   });
 
   it("F21-AC3 / rule 7: you can only promote your own live content with a package made for it", async () => {
@@ -76,6 +78,17 @@ describe("F21 promotion packages", () => {
     expect(await prisma.notification.count({ where: { recipientId: organiser.id, type: "campaign_live" } })).toBe(1);
     expect((await sponsoredEvents("events_featured", "viewer", 3)).map((s) => s.event.id)).toEqual([event.id]);
     await expect(reviewCampaign(mod.id, c.id, true)).rejects.toMatchObject({ code: "CAMPAIGN_STATE" });
+  });
+
+  it("F21-AC3: two promotions for the same event fill one slot", async () => {
+    const organiser = await member("Organiser");
+    const event = await ownedEvent(organiser.id);
+    const mod = await admin();
+    for (let i = 0; i < 2; i++) {
+      const c = await paidCampaign(organiser.id, { packageKey: "event_spotlight", targetType: "event", targetId: event.id });
+      await reviewCampaign(mod.id, c.id, true);
+    }
+    expect(await sponsoredEvents("events_featured", "viewer", 3)).toHaveLength(1);
   });
 
   it("F21-AC5/AC8: a rejected promotion is refunded in full through the gateway", async () => {

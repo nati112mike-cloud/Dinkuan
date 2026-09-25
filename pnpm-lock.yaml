@@ -75,6 +75,9 @@ importers:
 
   apps/web:
     dependencies:
+      '@dinkuan/ads':
+        specifier: workspace:*
+        version: link:../../packages/ads
       '@dinkuan/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -84,6 +87,9 @@ importers:
       '@dinkuan/i18n':
         specifier: workspace:*
         version: link:../../packages/i18n
+      '@dinkuan/marketplace':
+        specifier: workspace:*
+        version: link:../../packages/marketplace
       '@dinkuan/payments':
         specifier: workspace:*
         version: link:../../packages/payments
@@ -152,6 +158,9 @@ importers:
       '@types/node':
         specifier: ^22.0.0
         version: 22.20.4
+      tsx:
+        specifier: ^4.20.0
+        version: 4.23.15
       vitest:
         specifier: ^4.0.0
         version: 4.1.11(@types/node@22.20.4)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15))

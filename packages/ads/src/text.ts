@@ -30,7 +30,12 @@ export function estimatedReach(p: { impressions: number | null; days: number; pl
   }
   const share = p.placements.includes("home_weekend") ? 0.6 : p.placements.includes("events_featured") ? 0.35 : 0.2;
   const perDay = dailyActive * share;
-  const low = Math.round((perDay * Math.min(p.days, 3)) / 100) * 100;
+  const low = Math.round((perDay * p.days * 0.5) / 100) * 100;
   const high = Math.round((perDay * p.days * 0.8) / 100) * 100;
   return { low, high: Math.max(high, low) };
+}
+
+/** Sponsored items link through the click counter, which then redirects to the promoted thing. */
+export function adClickHref(campaignId: string, placement: string) {
+  return `/api/ads/click?c=${encodeURIComponent(campaignId)}&p=${encodeURIComponent(placement)}`;
 }

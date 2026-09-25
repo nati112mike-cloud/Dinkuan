@@ -13,12 +13,16 @@ export default async function DemoPayPage({ params }: { params: Promise<{ ref: s
   if (!isDemoMode()) notFound();
   const { ref } = await params;
   const payment = await prisma.demoPayment.findUnique({ where: { ref } });
-  const order = await prisma.order.findUnique({ where: { gatewayRef: ref } });
-  if (!payment || !order) notFound();
+  const [order, campaign] = await Promise.all([
+    prisma.order.findUnique({ where: { gatewayRef: ref } }),
+    prisma.campaign.findUnique({ where: { gatewayRef: ref } }),
+  ]);
+  if (!payment || (!order && !campaign)) notFound();
+  const returnUrl = order ? `/orders/${order.id}` : `/promote/c/${campaign!.id}`;
   return (
     <DemoPayForm
       refId={ref}
-      orderId={order.id}
+      returnUrl={returnUrl}
       gateway={payment.gateway}
       amountSantim={payment.amountSantim}
       description={payment.description}

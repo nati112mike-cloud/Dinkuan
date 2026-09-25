@@ -26,7 +26,7 @@ export default async function NotificationsPage() {
           {items.map((n) => {
             const p = n.actor.profile;
             const name = p?.username ?? "member";
-            const href = n.postId ? `/p/${n.postId}` : n.type === "follow_request" ? "/settings#requests" : `/u/${name}`;
+            const href = n.href ?? (n.postId ? `/p/${n.postId}` : n.type === "follow_request" ? "/settings#requests" : `/u/${name}`);
             return (
               <li key={n.id}>
                 <Link href={href} className={`flex items-center gap-3 rounded-2xl p-3 ring-1 ring-tent-100 ${n.readAt ? "bg-white" : "bg-tent-100"}`}>

@@ -39,6 +39,9 @@ test("gate staff scan tickets offline and sync", async ({ page, request }) => {
     .getByRole("button", { name: "Download for offline" })
     .click();
 
+  // Wait for the pack to land and the gate screen to open before going offline.
+  await expect(page.getByLabel("Or paste a ticket code")).toBeVisible({ timeout: 15_000 });
+
   // Everything below runs with the network off.
   await page.context().setOffline(true);
   const paste = page.getByLabel("Or paste a ticket code");

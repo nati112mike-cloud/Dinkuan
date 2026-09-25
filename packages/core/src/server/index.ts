@@ -9,3 +9,7 @@ export * from "./orders";
 export * from "./promotions";
 export * from "./scanner";
 export * from "./audit";
+export * from "./organisers";
+export * from "./event-admin";
+export * from "./dashboard";
+export * from "./admin";

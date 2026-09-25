@@ -120,16 +120,36 @@ model User {
   telegramChatId String?  @map("telegram_chat_id")
   createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
-  roles            UserRole[]
-  sessions         Session[]
-  organisers       Organiser[]
-  memberships      OrganiserMember[]
-  orders           Order[]
-  tickets          Ticket[]         @relation("TicketHolder")
-  savedEvents      SavedEvent[]
-  consents         Consent[]
-  transfersFrom    TicketTransfer[] @relation("TransferFrom")
-  transfersTo      TicketTransfer[] @relation("TransferTo")
+  roles         UserRole[]
+  sessions      Session[]
+  organisers    Organiser[]
+  memberships   OrganiserMember[]
+  orders        Order[]
+  tickets       Ticket[]          @relation("TicketHolder")
+  savedEvents   SavedEvent[]
+  consents      Consent[]
+  transfersFrom TicketTransfer[]  @relation("TransferFrom")
+  transfersTo   TicketTransfer[]  @relation("TransferTo")
+
+  profile           Profile?
+  following         Follow[]       @relation("Follower")
+  followers         Follow[]       @relation("Followee")
+  blocksMade        Block[]        @relation("Blocker")
+  blocksReceived    Block[]        @relation("Blocked")
+  mutesMade         Mute[]         @relation("Muter")
+  mutesReceived     Mute[]         @relation("Muted")
+  posts             Post[]
+  mentions          Mention[]
+  reactions         Reaction[]
+  comments          Comment[]
+  commentLikes      CommentLike[]
+  shares            Share[]
+  savedPosts        SavedPost[]
+  interests         UserInterest[]
+  uploads           MediaBlob[]
+  reports           Report[]
+  notifications     Notification[] @relation("NotificationRecipient")
+  notificationsSent Notification[] @relation("NotificationActor")
 
   @@map("users")
 }
@@ -208,6 +228,7 @@ model Venue {
   lat     Float
   lng     Float
   events  Event[]
+  posts   Post[]
 
   @@map("venues")
 }
@@ -242,6 +263,7 @@ model Event {
   orders      Order[]
   tickets     Ticket[]
   savedBy     SavedEvent[]
+  posts       Post[]
 
   @@index([status, startsAt])
   @@map("events")
@@ -279,23 +301,23 @@ model TicketType {
 }
 
 model Order {
-  id             String      @id @default(uuid()) @db.Uuid
-  number         Int         @unique @default(autoincrement())
-  userId         String      @map("user_id") @db.Uuid
-  eventId        String      @map("event_id") @db.Uuid
-  status         OrderStatus @default(pending)
-  subtotalSantim Int         @map("subtotal_santim")
-  feeSantim      Int         @map("fee_santim")
-  totalSantim    Int         @map("total_santim")
-  gateway        Gateway
-  gatewayRef     String      @unique @map("gateway_ref")
+  id               String      @id @default(uuid()) @db.Uuid
+  number           Int         @unique @default(autoincrement())
+  userId           String      @map("user_id") @db.Uuid
+  eventId          String      @map("event_id") @db.Uuid
+  status           OrderStatus @default(pending)
+  subtotalSantim   Int         @map("subtotal_santim")
+  feeSantim        Int         @map("fee_santim")
+  totalSantim      Int         @map("total_santim")
+  gateway          Gateway
+  gatewayRef       String      @unique @map("gateway_ref")
   // True while this order still holds reserved inventory (cleared when paid or released).
-  holdsReservation Boolean   @default(true) @map("holds_reservation")
-  promoCodeId    String?     @map("promo_code_id") @db.Uuid
-  promoterLinkId String?     @map("promoter_link_id") @db.Uuid
-  expiresAt      DateTime    @map("expires_at") @db.Timestamptz
-  paidAt         DateTime?   @map("paid_at") @db.Timestamptz
-  createdAt      DateTime    @default(now()) @map("created_at") @db.Timestamptz
+  holdsReservation Boolean     @default(true) @map("holds_reservation")
+  promoCodeId      String?     @map("promo_code_id") @db.Uuid
+  promoterLinkId   String?     @map("promoter_link_id") @db.Uuid
+  expiresAt        DateTime    @map("expires_at") @db.Timestamptz
+  paidAt           DateTime?   @map("paid_at") @db.Timestamptz
+  createdAt        DateTime    @default(now()) @map("created_at") @db.Timestamptz
 
   user    User          @relation(fields: [userId], references: [id])
   event   Event         @relation(fields: [eventId], references: [id])
@@ -470,13 +492,380 @@ model SavedEvent {
 
 /// Demo only: the state of the built-in stand-in payment gateway (replaced by Telebirr/Chapa).
 model DemoPayment {
-  ref          String   @id
-  gateway      Gateway
-  amountSantim Int      @map("amount_santim")
-  description  String
-  status       String   @default("pending")
-  refundedSantim Int    @default(0) @map("refunded_santim")
-  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz
+  ref            String   @id
+  gateway        Gateway
+  amountSantim   Int      @map("amount_santim")
+  description    String
+  status         String   @default("pending")
+  refundedSantim Int      @default(0) @map("refunded_santim")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
 
   @@map("demo_payments")
+}
+
+// ---------------------------------------------------------------------------
+// SOCIAL (F14–F17). Counters are denormalised (CLAUDE.md rule 18).
+
+enum FollowStatus {
+  active
+  requested
+}
+
+enum PostType {
+  text
+  photo
+  video
+  meme
+  reel
+}
+
+enum PostAudience {
+  public
+  followers
+}
+
+/// CLAUDE.md rule 14: processing → screening → public | restricted | removed
+enum ContentStatus {
+  processing
+  screening
+  public
+  restricted
+  removed
+}
+
+enum MediaKind {
+  image
+  video
+}
+
+enum ReactionType {
+  like
+  love
+  haha
+  fire
+  wow
+  sad
+  clap
+}
+
+enum CommentStatus {
+  visible
+  hidden
+  removed
+}
+
+enum ShareType {
+  repost
+  external
+  dm
+}
+
+enum NotificationType {
+  follow
+  follow_request
+  follow_accepted
+  reaction
+  comment
+  reply
+  mention
+}
+
+model Profile {
+  userId         String   @id @map("user_id") @db.Uuid
+  /// Stored lowercase; Latin letters, numbers, `_` and `.` (F14-AC1).
+  username       String   @unique
+  displayName    String   @map("display_name")
+  bio            String?
+  avatarUrl      String?  @map("avatar_url")
+  coverUrl       String?  @map("cover_url")
+  link           String?
+  subCity        String?  @map("sub_city")
+  isPrivate      Boolean  @default(false) @map("is_private")
+  isVerified     Boolean  @default(false) @map("is_verified")
+  creatorMode    Boolean  @default(false) @map("creator_mode")
+  lowDataMode    Boolean  @default(false) @map("low_data_mode")
+  showEvents     Boolean  @default(true) @map("show_events")
+  /// Comments containing any of these words are hidden on this person's posts (F16-AC3).
+  hiddenWords    String[] @map("hidden_words")
+  referralCode   String   @unique @map("referral_code")
+  referredById   String?  @map("referred_by_id") @db.Uuid
+  onboarded      Boolean  @default(false)
+  followersCount Int      @default(0) @map("followers_count")
+  followingCount Int      @default(0) @map("following_count")
+  postsCount     Int      @default(0) @map("posts_count")
+  likesReceived  Int      @default(0) @map("likes_received")
+  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([followersCount])
+  @@map("profiles")
+}
+
+model Follow {
+  followerId String       @map("follower_id") @db.Uuid
+  followeeId String       @map("followee_id") @db.Uuid
+  status     FollowStatus @default(active)
+  createdAt  DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  follower   User         @relation("Follower", fields: [followerId], references: [id], onDelete: Cascade)
+  followee   User         @relation("Followee", fields: [followeeId], references: [id], onDelete: Cascade)
+
+  @@id([followerId, followeeId])
+  @@index([followeeId, status])
+  @@map("follows")
+}
+
+model Block {
+  blockerId String   @map("blocker_id") @db.Uuid
+  blockedId String   @map("blocked_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  blocker   User     @relation("Blocker", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked   User     @relation("Blocked", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@id([blockerId, blockedId])
+  @@index([blockedId])
+  @@map("blocks")
+}
+
+model Mute {
+  muterId   String   @map("muter_id") @db.Uuid
+  mutedId   String   @map("muted_id") @db.Uuid
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  muter     User     @relation("Muter", fields: [muterId], references: [id], onDelete: Cascade)
+  muted     User     @relation("Muted", fields: [mutedId], references: [id], onDelete: Cascade)
+
+  @@id([muterId, mutedId])
+  @@map("mutes")
+}
+
+model Post {
+  id            String        @id @default(uuid()) @db.Uuid
+  authorId      String        @map("author_id") @db.Uuid
+  type          PostType
+  caption       String        @default("")
+  audience      PostAudience  @default(public)
+  eventId       String?       @map("event_id") @db.Uuid
+  venueId       String?       @map("venue_id") @db.Uuid
+  status        ContentStatus @default(processing)
+  viewCount     Int           @default(0) @map("view_count")
+  reactionCount Int           @default(0) @map("reaction_count")
+  commentCount  Int           @default(0) @map("comment_count")
+  shareCount    Int           @default(0) @map("share_count")
+  completions   Int           @default(0)
+  /// For You rank key: ln(engagement × boosts) + age decay folded into created time, so it never needs a time-based recompute.
+  rankKey       Float         @default(0) @map("rank_key")
+  createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  editedAt      DateTime?     @map("edited_at") @db.Timestamptz
+
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  event     Event?        @relation(fields: [eventId], references: [id], onDelete: SetNull)
+  venue     Venue?        @relation(fields: [venueId], references: [id], onDelete: SetNull)
+  media     Media[]
+  hashtags  PostHashtag[]
+  mentions  Mention[]
+  reactions Reaction[]
+  comments  Comment[]
+  shares    Share[]
+  savedBy   SavedPost[]
+  watches   WatchEvent[]
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([status, rankKey(sort: Desc)])
+  @@index([authorId, createdAt(sort: Desc)])
+  @@index([eventId, createdAt(sort: Desc)])
+  @@map("posts")
+}
+
+model Media {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @map("post_id") @db.Uuid
+  kind      MediaKind
+  url       String
+  /// 240p rendition for low-data mode (F16-AC8), when one exists.
+  lowUrl    String?   @map("low_url")
+  thumbUrl  String?   @map("thumb_url")
+  width     Int
+  height    Int
+  durationS Int?      @map("duration_s")
+  orderIdx  Int       @default(0) @map("order_idx")
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("media")
+}
+
+/// Demo storage: uploaded bytes live in Postgres so the demo runs on free hosting.
+/// Swap for object storage (STORAGE_BUCKET) before launch.
+model MediaBlob {
+  id          String   @id @default(uuid()) @db.Uuid
+  uploaderId  String   @map("uploader_id") @db.Uuid
+  contentType String   @map("content_type")
+  size        Int
+  received    Int      @default(0)
+  bytes       Bytes    @default("")
+  createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
+  uploader    User     @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
+
+  @@map("media_blobs")
+}
+
+model Hashtag {
+  id    String        @id @default(uuid()) @db.Uuid
+  tag   String        @unique
+  posts PostHashtag[]
+
+  @@map("hashtags")
+}
+
+model PostHashtag {
+  postId    String  @map("post_id") @db.Uuid
+  hashtagId String  @map("hashtag_id") @db.Uuid
+  post      Post    @relation(fields: [postId], references: [id], onDelete: Cascade)
+  hashtag   Hashtag @relation(fields: [hashtagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, hashtagId])
+  @@index([hashtagId])
+  @@map("post_hashtags")
+}
+
+model Mention {
+  postId String @map("post_id") @db.Uuid
+  userId String @map("user_id") @db.Uuid
+  post   Post   @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([postId, userId])
+  @@index([userId])
+  @@map("mentions")
+}
+
+model Reaction {
+  userId    String       @map("user_id") @db.Uuid
+  postId    String       @map("post_id") @db.Uuid
+  type      ReactionType
+  createdAt DateTime     @default(now()) @map("created_at") @db.Timestamptz
+  user      User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post      Post         @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@index([postId])
+  @@map("reactions")
+}
+
+model Comment {
+  id        String        @id @default(uuid()) @db.Uuid
+  postId    String        @map("post_id") @db.Uuid
+  authorId  String        @map("author_id") @db.Uuid
+  parentId  String?       @map("parent_id") @db.Uuid
+  body      String
+  likeCount Int           @default(0) @map("like_count")
+  pinned    Boolean       @default(false)
+  status    CommentStatus @default(visible)
+  createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz
+  post      Post          @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author    User          @relation(fields: [authorId], references: [id], onDelete: Cascade)
+  parent    Comment?      @relation("Replies", fields: [parentId], references: [id], onDelete: Cascade)
+  replies   Comment[]     @relation("Replies")
+  likes     CommentLike[]
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}
+
+model CommentLike {
+  userId    String  @map("user_id") @db.Uuid
+  commentId String  @map("comment_id") @db.Uuid
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  comment   Comment @relation(fields: [commentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, commentId])
+  @@map("comment_likes")
+}
+
+model Share {
+  id        String    @id @default(uuid()) @db.Uuid
+  postId    String    @map("post_id") @db.Uuid
+  userId    String    @map("user_id") @db.Uuid
+  type      ShareType
+  comment   String?
+  createdAt DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt(sort: Desc)])
+  @@map("shares")
+}
+
+model SavedPost {
+  userId     String   @map("user_id") @db.Uuid
+  postId     String   @map("post_id") @db.Uuid
+  collection String   @default("")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  post       Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@id([userId, postId])
+  @@map("saved_posts")
+}
+
+model WatchEvent {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @map("user_id") @db.Uuid
+  postId    String   @map("post_id") @db.Uuid
+  watchedMs Int      @map("watched_ms")
+  completed Boolean
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
+  post      Post     @relation(fields: [postId], references: [id], onDelete: Cascade)
+
+  @@index([postId])
+  @@map("watch_events")
+}
+
+model Interest {
+  id    String         @id @default(uuid()) @db.Uuid
+  key   String         @unique
+  users UserInterest[]
+
+  @@map("interests")
+}
+
+model UserInterest {
+  userId     String   @map("user_id") @db.Uuid
+  interestId String   @map("interest_id") @db.Uuid
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  interest   Interest @relation(fields: [interestId], references: [id], onDelete: Cascade)
+
+  @@id([userId, interestId])
+  @@index([interestId])
+  @@map("user_interests")
+}
+
+/// F22-AC3: report button on posts, comments and profiles.
+model Report {
+  id         String   @id @default(uuid()) @db.Uuid
+  reporterId String   @map("reporter_id") @db.Uuid
+  targetType String   @map("target_type")
+  targetId   String   @map("target_id")
+  reason     String
+  details    String?
+  status     String   @default("open")
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
+  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+
+  @@index([status, createdAt])
+  @@map("reports")
+}
+
+model Notification {
+  id          String           @id @default(uuid()) @db.Uuid
+  recipientId String           @map("recipient_id") @db.Uuid
+  actorId     String           @map("actor_id") @db.Uuid
+  type        NotificationType
+  postId      String?          @map("post_id") @db.Uuid
+  readAt      DateTime?        @map("read_at") @db.Timestamptz
+  createdAt   DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  recipient   User             @relation("NotificationRecipient", fields: [recipientId], references: [id], onDelete: Cascade)
+  actor       User             @relation("NotificationActor", fields: [actorId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt(sort: Desc)])
+  @@map("notifications")
 }

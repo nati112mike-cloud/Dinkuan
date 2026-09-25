@@ -1,82 +1,79 @@
 import Link from "next/link";
-import { EventCard } from "@/components/EventCard";
-import { CATEGORIES, findEvents } from "@/lib/events";
-import { getT } from "@/lib/session";
+import { followingFeed, forYouFeed } from "@dinkuan/social";
+import { EventsDiscovery } from "@/components/EventsDiscovery";
+import { Feed } from "@/components/Feed";
+import { currentUser, getT } from "@/lib/session";
+import { toPostDTO } from "@/lib/social";
 
 export const dynamic = "force-dynamic";
 
-function Row({ title, href, children }: { title: string; href: string; children: React.ReactNode }) {
-  return (
-    <section className="space-y-3">
-      <div className="flex items-baseline justify-between">
-        <h2 className="text-lg font-extrabold">{title}</h2>
-        <Link href={href} className="text-sm font-semibold text-tent-600">
-          →
+type Tab = "foryou" | "following" | "events";
+
+/** F16-AC1: Home tabs For You · Following · Events. */
+export default async function Home({ searchParams }: { searchParams: Promise<{ tab?: string }> }) {
+  const { tab: raw } = await searchParams;
+  const tab: Tab = raw === "following" || raw === "events" ? raw : "foryou";
+  const { lang, t } = await getT();
+  const user = await currentUser();
+  const viewer = user?.id ?? null;
+
+  const tabs: { key: Tab; label: string }[] = [
+    { key: "foryou", label: t("feed.forYou") },
+    { key: "following", label: t("feed.following") },
+    { key: "events", label: t("feed.events") },
+  ];
+
+  let body: React.ReactNode;
+  if (tab === "events") {
+    body = <EventsDiscovery lang={lang} />;
+  } else if (tab === "following" && !viewer) {
+    body = (
+      <div className="space-y-3 py-8 text-center">
+        <p className="text-stone-600">{t("feed.loginForFollowing")}</p>
+        <Link href="/login?next=/?tab=following" className="tap inline-grid place-items-center rounded-full bg-tent-600 px-6 font-semibold text-white">
+          {t("nav.login")}
         </Link>
       </div>
-      <div className="no-scrollbar -mx-4 flex gap-3 overflow-x-auto px-4 pb-1">{children}</div>
-    </section>
-  );
-}
-
-export default async function Home() {
-  const { lang, t } = await getT();
-  const [featured, tonight, weekend, upcoming] = await Promise.all([
-    findEvents({ featured: true, limit: 6 }),
-    findEvents({ date: "today", limit: 8 }),
-    findEvents({ date: "weekend", limit: 8 }),
-    findEvents({ limit: 12 }),
-  ]);
-  return (
-    <div className="space-y-8">
-      <form action="/events" className="relative">
-        <input
-          name="q"
-          placeholder={t("search.placeholder")}
-          className="tap w-full rounded-2xl border border-tent-200 bg-white px-4 py-3 pr-12 shadow-sm outline-none focus:border-tent-500"
-        />
-        <span className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2" aria-hidden>
-          🔍
-        </span>
-      </form>
-
-      {featured.length > 0 && (
-        <Row title={t("home.featured")} href="/events">
-          {featured.map((e) => (
-            <EventCard key={e.id} event={e} lang={lang} wide />
-          ))}
-        </Row>
-      )}
-      <Row title={t("home.tonight")} href="/events?date=today">
-        {tonight.length ? tonight.map((e) => <EventCard key={e.id} event={e} lang={lang} wide />) : <p className="text-stone-500">{t("home.empty")}</p>}
-      </Row>
-      <Row title={t("home.weekend")} href="/events?date=weekend">
-        {weekend.length ? weekend.map((e) => <EventCard key={e.id} event={e} lang={lang} wide />) : <p className="text-stone-500">{t("home.empty")}</p>}
-      </Row>
-
-      <section className="space-y-3">
-        <h2 className="text-lg font-extrabold">{t("home.byCategory")}</h2>
-        <div className="flex flex-wrap gap-2">
-          {CATEGORIES.map((c) => (
-            <Link
-              key={c}
-              href={`/events?category=${c}`}
-              className="tap grid place-items-center rounded-full bg-white px-4 text-sm font-semibold ring-1 ring-tent-200"
-            >
-              {t(`category.${c}`)}
+    );
+  } else {
+    const page = tab === "following" ? await followingFeed(viewer!) : await forYouFeed(viewer);
+    const initial = { items: page.items.map((p) => toPostDTO(p, viewer, lang)), nextCursor: page.nextCursor };
+    body = (
+      <Feed
+        key={tab}
+        initial={initial}
+        endpoint={`/api/feed?tab=${tab}`}
+        lang={lang}
+        loggedIn={!!user}
+        empty={
+          <div className="space-y-3 py-8 text-center">
+            <p className="text-stone-600">{t("feed.empty")}</p>
+            <Link href="/people" className="tap inline-grid place-items-center rounded-full bg-tent-600 px-6 font-semibold text-white">
+              {t("feed.findPeople")}
             </Link>
-          ))}
-        </div>
-      </section>
+          </div>
+        }
+      />
+    );
+  }
 
-      <section className="space-y-3">
-        <h2 className="text-lg font-extrabold">{t("home.upcoming")}</h2>
-        <div className="grid grid-cols-2 gap-3">
-          {upcoming.map((e) => (
-            <EventCard key={e.id} event={e} lang={lang} />
-          ))}
-        </div>
-      </section>
+  return (
+    <div className="space-y-4">
+      <nav className="sticky top-[53px] z-10 -mx-4 flex bg-tent-50/95 px-4 backdrop-blur" aria-label="Feed">
+        {tabs.map((x) => (
+          <Link
+            key={x.key}
+            href={x.key === "foryou" ? "/" : `/?tab=${x.key}`}
+            aria-current={tab === x.key ? "page" : undefined}
+            className={`tap flex-1 border-b-2 text-center font-bold leading-[44px] ${
+              tab === x.key ? "border-tent-600 text-tent-700" : "border-transparent text-stone-500"
+            }`}
+          >
+            {x.label}
+          </Link>
+        ))}
+      </nav>
+      {body}
     </div>
   );
 }

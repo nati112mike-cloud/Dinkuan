@@ -15,6 +15,9 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   NOT_FOUND: 404,
   OTP_RATE_LIMITED: 429,
   WEBHOOK_SIGNATURE: 401,
+  BLOCKED: 403,
+  RATE_LIMITED: 429,
+  UPLOAD_TOO_LARGE: 413,
 };
 
 export function fail(code: ErrorCode, message?: string) {

@@ -1,0 +1,27 @@
+{
+  "name": "@dinkuan/social",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./text": "./src/text.ts"
+  },
+  "scripts": {
+    "lint": "eslint src test seed",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run",
+    "bench": "tsx test/bench-feed.ts",
+    "seed": "tsx seed/seed-social.ts"
+  },
+  "dependencies": {
+    "@dinkuan/core": "workspace:*",
+    "@dinkuan/db": "workspace:*",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "tsx": "^4.20.0",
+    "vitest": "^4.0.0"
+  }
+}

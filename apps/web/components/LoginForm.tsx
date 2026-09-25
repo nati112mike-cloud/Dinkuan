@@ -82,7 +82,8 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
           onSubmit={async (e) => {
             e.preventDefault();
             const data = await call("/api/me", { name, lang });
-            if (data) window.location.href = next;
+            // New members coming from the home page get the F17-AC1 onboarding; mid-checkout they carry on.
+            if (data) window.location.href = next === "/" ? "/welcome" : next;
           }}
         >
           <label className="block space-y-1 font-semibold">

@@ -15,6 +15,7 @@
     "@dinkuan/db": "workspace:*",
     "@dinkuan/i18n": "workspace:*",
     "@dinkuan/payments": "workspace:*",
+    "@dinkuan/social": "workspace:*",
     "next": "16.3.6",
     "qrcode": "^1.5.4",
     "react": "19.3.0",

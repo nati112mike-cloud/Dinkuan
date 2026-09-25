@@ -1,0 +1,39 @@
+name: Demo database
+
+# Applies migrations to the hosted demo database and refreshes the demo data.
+# Re-seeding is safe: it keeps existing orders and only moves demo event dates
+# forward so "Tonight" and "This weekend" never go stale.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *" # 03:00 in Addis Ababa
+
+jobs:
+  migrate-and-seed:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DEMO_DATABASE_URL }}
+      KEY_ENCRYPTION_SECRET: ${{ secrets.DEMO_KEY_ENCRYPTION_SECRET }}
+    steps:
+      - name: Skip until the demo database is configured
+        id: guard
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$KEY_ENCRYPTION_SECRET" ]; then
+            echo "DEMO_DATABASE_URL or DEMO_KEY_ENCRYPTION_SECRET is not set; nothing to do."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - uses: actions/checkout@v4
+        if: steps.guard.outputs.ready == 'true'
+      - uses: pnpm/action-setup@v4
+        if: steps.guard.outputs.ready == 'true'
+      - uses: actions/setup-node@v4
+        if: steps.guard.outputs.ready == 'true'
+        with:
+          node-version: 22
+          cache: pnpm
+      - if: steps.guard.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+      - if: steps.guard.outputs.ready == 'true'
+        run: pnpm db:deploy && pnpm db:seed

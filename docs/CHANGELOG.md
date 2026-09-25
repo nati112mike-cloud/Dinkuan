@@ -14,3 +14,5 @@ Built in demo mode so the platform can be shown before gateway and SMS contracts
 - Seed data: 8 Addis venues, 2 organisers, 9 events with tiers, demo accounts.
 
 Not yet built: organiser dashboard and event creation (F2, F3, F11), Telegram bot (F7), refunds UI and payouts (F9, F11), promoter links (F10), admin (F12), notifications (F13), ticket transfer (F6-AC5), and everything in the social and marketplace pillars.
+
+- Hosting prep: Vercel + Neon guide (docs/DEPLOY.md), nightly demo-database workflow, Vercel cron for reconciliation, and checkouts now release lapsed holds on the same event.

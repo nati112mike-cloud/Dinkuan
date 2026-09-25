@@ -44,6 +44,27 @@ describe("F5 checkout", () => {
     expect((await prisma.ticketType.findUniqueOrThrow({ where: { id: ticketType.id } })).reserved).toBe(0);
   });
 
+  it("F5-AC3: a new checkout on the event releases other buyers' lapsed holds", async () => {
+    const { event, ticketType } = await makeEvent({ capacity: 2 });
+    const first = await makeUser("First");
+    const second = await makeUser("Second");
+    const { order } = await startCheckout({
+      userId: first.id,
+      eventId: event.id,
+      items: [{ ticketTypeId: ticketType.id, qty: 2 }],
+      gateway: "telebirr",
+    });
+    await startCheckout({
+      userId: second.id,
+      eventId: event.id,
+      items: [{ ticketTypeId: ticketType.id, qty: 2 }],
+      gateway: "telebirr",
+      now: new Date(Date.now() + 11 * 60_000),
+    });
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("expired");
+    expect((await prisma.ticketType.findUniqueOrThrow({ where: { id: ticketType.id } })).reserved).toBe(2);
+  });
+
   it("F5-AC6: the client redirect alone does not mark the order paid", async () => {
     const { event, ticketType } = await makeEvent();
     const user = await makeUser();

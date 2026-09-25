@@ -83,7 +83,8 @@ export async function startCheckout(input: {
   const now = input.now ?? new Date();
   const items = input.items.filter((i) => i.qty > 0);
   if (items.length === 0) throw new DomainError("VALIDATION", "No tickets selected");
-  await expireStaleOrders(now, { userId: input.userId });
+  // Release lapsed holds on this event too, so stock frees up even when the reconcile job runs rarely.
+  await expireStaleOrders(now, { OR: [{ userId: input.userId }, { eventId: input.eventId }] });
 
   const order = await prisma.$transaction(async (tx) => {
     // Serialise checkouts per user so the pending-order and per-phone limits hold under races.

@@ -9,3 +9,5 @@ export * from "./orders";
 export * from "./promotions";
 export * from "./scanner";
 export * from "./audit";
+export * from "./outbox";
+export * from "./telegram";

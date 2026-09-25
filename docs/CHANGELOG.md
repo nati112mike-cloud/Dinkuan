@@ -42,3 +42,7 @@ Demo shortcuts, to replace before launch: uploads are stored in Postgres (swap f
 - E2E: `marketplace.spec` (find a free DJ, compare 3, request, chat with contacts masked) and `promotion.spec` (buy Event Spotlight, admin approves, labelled, a ticket sale counts, stop refunds). `E2E_WIDTH=360` runs them at the smallest phone width.
 
 Demo shortcuts: Weekend Takeover's reels boost and Telegram channel post wait for the bot (M4), and vendor stats for the seeded pros stand in for bookings made before ድንኳን.
+
+## Demo milestone 4: dashboards, Telegram bot and demo polish
+
+- F7 Telegram bot (`apps/bot`, grammY): `/start` links the chat by sharing your own phone number (only the sender's own contact counts), `/tonight` and `/weekend` event cards with poster, Addis date, venue, all-in "from" price and a Buy button that opens checkout as a Telegram Web App through a one-time 15-minute sign-in link (`/tg/login`), `/mytickets`, `/language` (saved on the account) and `/help`, all in Amharic by default or English. Paid tickets arrive in the chat as QR images (the wallet's static fallback code) with the event details, and ticket holders get reminders 24 hours and 3 hours before, once per person per event. Delivery runs through an idempotent outbox with retries, sent right after payment and from `/api/cron/telegram`. Settings has a "Connect Telegram" row. Without a bot token nothing changes.

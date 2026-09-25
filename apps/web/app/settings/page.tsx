@@ -57,6 +57,7 @@ export default async function SettingsPage() {
           hiddenWords: profile.hiddenWords,
         }}
       />
+      <TelegramRow connected={!!me.user.telegramChatId} t={t} />
       <section id="requests" className="space-y-3">
         <h2 className="text-lg font-bold">{t("settings.requests")}</h2>
         {requests.length ? <ul className="space-y-2">{requests.map((p) => row(p, "request"))}</ul> : <p className="text-stone-500">{t("settings.noRequests")}</p>}
@@ -66,5 +67,31 @@ export default async function SettingsPage() {
         {blocked.length ? <ul className="space-y-2">{blocked.map((p) => row(p, "blocked"))}</ul> : <p className="text-stone-500">{t("settings.noBlocked")}</p>}
       </section>
     </div>
+  );
+}
+
+/** F7: link the account to the Telegram bot (tickets and reminders in Telegram). */
+function TelegramRow({ connected, t }: { connected: boolean; t: Awaited<ReturnType<typeof getT>>["t"] }) {
+  const bot = process.env.TELEGRAM_BOT_USERNAME;
+  if (!connected && !bot) return null;
+  return (
+    <section id="telegram" className="flex items-center gap-3 rounded-2xl bg-white p-3 ring-1 ring-tent-100">
+      <span className="min-w-0 flex-1">
+        <span className="block font-bold">{t("bot.settings.title")}</span>
+        <span className="block text-sm text-stone-500">{t("bot.settings.hint")}</span>
+      </span>
+      {connected ? (
+        <span className="shrink-0 text-sm font-semibold text-green-700">✓ {t("bot.settings.connected")}</span>
+      ) : (
+        <a
+          href={`https://t.me/${encodeURIComponent(bot!)}?start=connect`}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="tap inline-grid shrink-0 place-items-center rounded-full bg-tent-600 px-4 text-sm font-semibold text-white"
+        >
+          {t("bot.settings.connect")}
+        </a>
+      )}
+    </section>
   );
 }

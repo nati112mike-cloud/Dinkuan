@@ -3,6 +3,7 @@ import { prisma } from "@dinkuan/db";
 import { signDemoWebhook, DEMO_SIGNATURE_HEADER } from "@dinkuan/payments";
 import { z } from "zod";
 import { fail, handleError, ok, parseJson } from "@/lib/api";
+import { drainTelegramAfterResponse } from "@/lib/telegram";
 
 /**
  * Demo gateway only: the buyer confirms or cancels on the fake payment page. This plays the
@@ -25,6 +26,8 @@ export async function POST(req: Request, { params }: { params: Promise<{ ref: st
     const gateway = (await prisma.demoPayment.findUniqueOrThrow({ where: { ref } })).gateway;
     await handlePaymentWebhook(gateway, body, { [DEMO_SIGNATURE_HEADER]: signDemoWebhook(body, webhookSecret()) });
     const order = await prisma.order.findUnique({ where: { gatewayRef: ref } });
+    // F7-AC3: tickets go to Telegram after the response (best effort, never fails the payment).
+    if (order?.status === "paid") drainTelegramAfterResponse();
     return ok({ orderId: order?.id ?? null });
   } catch (e) {
     return handleError(e);

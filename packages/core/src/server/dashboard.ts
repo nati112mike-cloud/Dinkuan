@@ -107,3 +107,11 @@ export async function organiserMoney(actorId: string, organiserId: string) {
   const sum = (type: string) => rows.find((r) => r.type === type)?._sum.amountSantim ?? 0;
   return { salesSantim: sum("sale"), refundsSantim: Math.abs(sum("refund")), payoutsSantim: Math.abs(sum("payout")), netSantim: sum("sale") + sum("refund") + sum("payout") };
 }
+
+/** Records the buyer's answer at checkout (consent log, rule 12). Only writes when it changes. */
+export async function recordPhoneConsent(userId: string, eventId: string, granted: boolean) {
+  const type = phoneConsentType(eventId);
+  const last = await prisma.consent.findFirst({ where: { userId, type }, orderBy: { createdAt: "desc" } });
+  if ((last?.granted ?? false) === granted) return;
+  await prisma.consent.create({ data: { userId, type, granted } });
+}

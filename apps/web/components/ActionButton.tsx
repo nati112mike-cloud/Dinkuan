@@ -12,6 +12,7 @@ export function ActionButton({
   body = {},
   label,
   confirm,
+  prompt,
   tone = "primary",
 }: {
   lang: Lang;
@@ -19,6 +20,8 @@ export function ActionButton({
   body?: unknown;
   label: MessageKey;
   confirm?: MessageKey;
+  /** Ask for a short text (a reason or note) and send it as this body field. */
+  prompt?: { field: string; label: MessageKey };
   tone?: "primary" | "quiet" | "danger";
 }) {
   const t = translator(lang);
@@ -39,9 +42,15 @@ export function ActionButton({
         className={`tap rounded-xl px-4 text-sm font-bold disabled:opacity-50 ${style}`}
         onClick={async () => {
           if (confirm && !window.confirm(t(confirm))) return;
+          let payload = body;
+          if (prompt) {
+            const text = window.prompt(t(prompt.label))?.trim();
+            if (!text) return;
+            payload = { ...(body as object), [prompt.field]: text };
+          }
           setBusy(true);
           setError(null);
-          const r = await api(url, { body });
+          const r = await api(url, { body: payload });
           setBusy(false);
           if (r.ok) router.refresh();
           else setError(errorText(lang, r.code));

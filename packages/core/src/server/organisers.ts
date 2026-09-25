@@ -60,7 +60,8 @@ export const organiserInput = z
       .regex(/^\d{10}$/, "TIN is 10 digits")
       .optional()
       .nullable(),
-    licenceUrl: z.string().max(300).optional().nullable(),
+    // Only our own uploads, never an outside link.
+    licenceUrl: z.string().regex(/^\/api\/media\/[\w-]+$/, "Upload the licence here").optional().nullable(),
     payoutMethod: z.enum(["telebirr", "bank"]),
     payoutAccount,
   })
@@ -73,7 +74,8 @@ export type OrganiserInput = z.input<typeof organiserInput>;
 
 /**
  * F2: apply to sell tickets. Businesses submit TIN and trade licence for admin review (AC1).
- * Individuals have no licence and can publish free events only (AC2), so they need no review.
+ * Individuals need no licence and can publish free events only (AC2). Everyone is reviewed, since
+ * an admin verifies the payout details (AC3).
  * Saving without `submit` keeps a draft. New organisers start with payout_hold (AC4).
  */
 export async function saveOrganiserApplication(userId: string, raw: OrganiserInput, submit: boolean, now = new Date()) {

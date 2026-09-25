@@ -21,6 +21,12 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   DATE_UNAVAILABLE: 409,
   CAMPAIGN_STATE: 409,
   REFUND_FAILED: 502,
+  ORGANISER_NOT_APPROVED: 403,
+  ORGANISER_STATE: 409,
+  EVENT_STATE: 409,
+  PRICE_LOCKED: 409,
+  TYPE_HAS_SALES: 409,
+  CAPACITY_BELOW_SOLD: 409,
 };
 
 export function fail(code: ErrorCode, message?: string) {

@@ -51,7 +51,7 @@ export const eventInput = z
     startsAt: z.iso.datetime({ offset: true }),
     endsAt: z.iso.datetime({ offset: true }).optional().nullable(),
     /** An uploaded poster, or null for the generated design (/posters/<slug>). */
-    posterUrl: z.string().max(300).optional().nullable(),
+    posterUrl: z.string().regex(/^\/(api\/media|posters)\/[\w-]+$/, "Upload the poster here").optional().nullable(),
     lineup: z.array(z.string().trim().min(1).max(60)).max(20).default([]),
   })
   .superRefine((v, ctx) => {

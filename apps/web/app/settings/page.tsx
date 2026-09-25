@@ -5,7 +5,7 @@ import { blockedList, followRequests } from "@dinkuan/social";
 import { Avatar } from "@/components/Avatar";
 import { RequestActions } from "@/components/RequestActions";
 import { SettingsForm } from "@/components/SettingsForm";
-import { getT } from "@/lib/session";
+import { getT, isAdmin } from "@/lib/session";
 import { currentMember, toProfileDTO } from "@/lib/social";
 
 export const dynamic = "force-dynamic";
@@ -40,6 +40,16 @@ export default async function SettingsPage() {
           🔖 {t("settings.savedPosts")}
         </Link>
       </div>
+      <nav className="flex flex-wrap gap-2 text-sm font-semibold">
+        <Link href="/organiser" className="tap flex items-center rounded-xl bg-white px-3 ring-1 ring-tent-200">
+          🎪 {t("settings.organiser")}
+        </Link>
+        {isAdmin(me.user) && (
+          <Link href="/admin" className="tap flex items-center rounded-xl bg-white px-3 ring-1 ring-tent-200">
+            🛡 {t("admin.title")}
+          </Link>
+        )}
+      </nav>
       <SettingsForm
         lang={lang}
         initial={{

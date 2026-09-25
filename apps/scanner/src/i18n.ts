@@ -1,0 +1,96 @@
+/** Scanner strings in Amharic and English (CLAUDE.md rule 8). */
+export type Lang = "am" | "en";
+
+const en = {
+  title: "Gate scanner",
+  phone: "Phone number",
+  sendCode: "Send code",
+  code: "6-digit code",
+  demoCode: "Demo: use code 123456",
+  login: "Log in",
+  pickEvent: "Pick an event",
+  noEvents: "No events to scan. Ask the organiser to add you as scanner.",
+  download: "Download for offline",
+  downloading: "Downloading…",
+  ready: "{count} tickets ready offline",
+  gate: "Gate",
+  scan: "Scan",
+  search: "Search",
+  searchPlaceholder: "Name or last 4 phone digits",
+  admit: "Admit",
+  checkedIn: "Checked in",
+  of: "of",
+  sync: "Sync",
+  syncing: "Syncing…",
+  synced: "Synced {pushed} check-ins",
+  conflicts: "{count} conflicts flagged",
+  offline: "Offline. Scans are saved and will sync later.",
+  pending: "{count} waiting to sync",
+  valid: "VALID",
+  invalid: "INVALID",
+  cameraError: "Camera not available. Use search instead.",
+  changeEvent: "Change event",
+  logout: "Log out",
+  pasteCode: "Or paste a ticket code",
+  check: "Check",
+  "reason.FAKE": "Fake or damaged code",
+  "reason.WRONG_EVENT": "Ticket for a different event",
+  "reason.EXPIRED_QR": "Old screenshot. Ask for the live code.",
+  "reason.ALREADY_USED": "Already used",
+  "reason.REFUNDED": "Refunded ticket",
+  "reason.OLD_VERSION": "Ticket was transferred. This code is no longer valid.",
+  "reason.VOID": "Ticket cancelled",
+  "reason.UNKNOWN_TICKET": "Ticket not in list. Sync and try again.",
+} as const;
+
+type Key = keyof typeof en;
+
+const am: Record<Key, string> = {
+  title: "የመግቢያ ስካነር",
+  phone: "ስልክ ቁጥር",
+  sendCode: "ኮድ ላክ",
+  code: "ባለ 6 አሃዝ ኮድ",
+  demoCode: "ሙከራ፦ ኮድ 123456 ይጠቀሙ",
+  login: "ግባ",
+  pickEvent: "ዝግጅት ይምረጡ",
+  noEvents: "የሚቃኝ ዝግጅት የለም። አዘጋጁ እንደ ስካነር እንዲጨምርዎ ይጠይቁ።",
+  download: "ከመስመር ውጭ ለመጠቀም አውርድ",
+  downloading: "በማውረድ ላይ…",
+  ready: "{count} ትኬቶች ከመስመር ውጭ ዝግጁ",
+  gate: "በር",
+  scan: "ቃኝ",
+  search: "ፈልግ",
+  searchPlaceholder: "ስም ወይም የስልክ የመጨረሻ 4 አሃዝ",
+  admit: "አስገባ",
+  checkedIn: "የገቡ",
+  of: "ከ",
+  sync: "አመሳስል",
+  syncing: "በማመሳሰል ላይ…",
+  synced: "{pushed} መግቢያዎች ተመሳስለዋል",
+  conflicts: "{count} ግጭቶች ተመዝግበዋል",
+  offline: "ከመስመር ውጭ። ቅኝቶች ተቀምጠው በኋላ ይመሳሰላሉ።",
+  pending: "{count} ለማመሳሰል ይጠብቃሉ",
+  valid: "ትክክል",
+  invalid: "ልክ ያልሆነ",
+  cameraError: "ካሜራ አይገኝም። ፍለጋን ይጠቀሙ።",
+  changeEvent: "ዝግጅት ቀይር",
+  logout: "ውጣ",
+  pasteCode: "ወይም የትኬት ኮድ ይለጥፉ",
+  check: "አረጋግጥ",
+  "reason.FAKE": "የሐሰት ወይም የተበላሸ ኮድ",
+  "reason.WRONG_EVENT": "የሌላ ዝግጅት ትኬት",
+  "reason.EXPIRED_QR": "የቆየ ስክሪንሾት። የቀጥታውን ኮድ ይጠይቁ።",
+  "reason.ALREADY_USED": "ቀድሞ ጥቅም ላይ ውሏል",
+  "reason.REFUNDED": "ገንዘቡ የተመለሰ ትኬት",
+  "reason.OLD_VERSION": "ትኬቱ ተላልፏል። ይህ ኮድ አይሰራም።",
+  "reason.VOID": "የተሰረዘ ትኬት",
+  "reason.UNKNOWN_TICKET": "ትኬቱ በዝርዝሩ የለም። አመሳስለው እንደገና ይሞክሩ።",
+};
+
+export type ScannerKey = Key;
+
+export function tr(lang: Lang) {
+  const dict = lang === "am" ? am : en;
+  return (key: Key, vars?: Record<string, string | number>) =>
+    dict[key].replace(/\{(\w+)\}/g, (_, k: string) => String(vars?.[k] ?? ""));
+}

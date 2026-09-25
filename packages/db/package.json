@@ -1,0 +1,27 @@
+{
+  "name": "@dinkuan/db",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "deploy": "prisma migrate deploy",
+    "seed": "tsx prisma/seed.ts",
+    "postinstall": "prisma generate",
+    "lint": "eslint src prisma",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@prisma/client": "6.19.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@noble/ed25519": "^3.0.0",
+    "prisma": "6.19.3",
+    "tsx": "^4.20.0"
+  }
+}

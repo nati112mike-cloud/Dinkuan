@@ -1,0 +1,32 @@
+{
+  "name": "@dinkuan/scanner",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 5173",
+    "build": "vite build",
+    "preview": "vite preview --port 5173",
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dinkuan/core": "workspace:*",
+    "dexie": "^4.4.0",
+    "qr-scanner": "^1.4.2",
+    "react": "19.3.0",
+    "react-dom": "19.3.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^6.0.0",
+    "fake-indexeddb": "^6.0.0",
+    "tailwindcss": "^4.3.3",
+    "vite": "^8.0.0",
+    "vite-plugin-pwa": "^1.0.0",
+    "vitest": "^4.0.0"
+  }
+}

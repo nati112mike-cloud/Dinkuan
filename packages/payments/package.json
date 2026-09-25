@@ -1,0 +1,16 @@
+{
+  "name": "@dinkuan/payments",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": { ".": "./src/index.ts" },
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "vitest": "^4.0.0"
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "name": "@dinkuan/core",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts",
+    "./server": "./src/server/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint src test",
+    "typecheck": "tsc -p tsconfig.json",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@dinkuan/db": "workspace:*",
+    "@dinkuan/payments": "workspace:*",
+    "@noble/ed25519": "^3.0.0",
+    "zod": "^4.1.0"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "vitest": "^4.0.0"
+  }
+}

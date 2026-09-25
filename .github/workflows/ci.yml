@@ -1,0 +1,58 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+env:
+  DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dinkuan
+  TEST_DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dinkuan_test
+  APP_URL: http://localhost:3000
+  SCANNER_ORIGIN: http://localhost:5173
+  SESSION_SECRET: ci-session-secret
+  KEY_ENCRYPTION_SECRET: MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=
+  PAYMENT_WEBHOOK_SECRET: ci-webhook-secret
+  DEMO_MODE: "true"
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: dinkuan
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready --health-interval 5s --health-timeout 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: psql postgresql://postgres:postgres@localhost:5432/postgres -c "CREATE DATABASE dinkuan_test"
+      - run: pnpm lint
+      - run: pnpm typecheck
+      - run: pnpm test
+      - name: Build
+        run: pnpm build
+      - name: Seed demo data
+        run: pnpm db:deploy && pnpm db:seed
+      - name: Install Playwright Chromium
+        run: pnpm --filter @dinkuan/web exec playwright install --with-deps chromium
+      - name: End-to-end (buyer + scanner)
+        run: |
+          echo "VITE_API_URL=http://localhost:3000" > apps/scanner/.env.local
+          pnpm --filter @dinkuan/scanner build
+          (pnpm --filter @dinkuan/scanner preview > scanner.log 2>&1 &)
+          pnpm test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: apps/web/test-results

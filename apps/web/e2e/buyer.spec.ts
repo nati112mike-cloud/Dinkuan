@@ -13,7 +13,7 @@ const snap = async (page: import("@playwright/test").Page, name: string) => {
  */
 test("buyer buys a ticket and sees a rotating QR", async ({ page }) => {
   const phone = `09${String(Date.now()).slice(-8)}`;
-  await page.goto("/");
+  await page.goto("/?tab=events");
   await expect(page.getByRole("heading", { name: /ተመራጭ|Featured/ })).toBeVisible();
   await snap(page, "01-home-am");
 

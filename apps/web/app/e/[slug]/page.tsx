@@ -1,13 +1,17 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { allInPrice, feePerTicket } from "@dinkuan/core";
+import Link from "next/link";
 import { prisma } from "@dinkuan/db";
+import { eventMoments } from "@dinkuan/social";
+import { PostGrid } from "@/components/PostGrid";
 import { SaveButton } from "@/components/SaveButton";
 import { ShareButton } from "@/components/ShareButton";
 import { TicketSelector } from "@/components/TicketSelector";
 import { getEventBySlug } from "@/lib/events";
 import { ethiopianDate, eventDesc, eventTitle, formatLongDate, formatTime } from "@/lib/format";
 import { currentUser, getT } from "@/lib/session";
+import { toPostDTO } from "@/lib/social";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +62,7 @@ export default async function EventPage({ params }: { params: Params }) {
         closed: !!closed,
       };
     });
+  const moments = await eventMoments(event.id, user?.id ?? null, null, 9);
   const mapUrl = `https://www.google.com/maps/search/?api=1&query=${event.venue.lat},${event.venue.lng}`;
   const title = eventTitle(event, lang);
 
@@ -121,6 +126,21 @@ export default async function EventPage({ params }: { params: Params }) {
           <TicketSelector lang={lang} eventId={event.id} slug={event.slug} types={types} loggedIn={!!user} />
         )}
         <p className="text-xs text-stone-500">{t("checkout.reserved")}</p>
+      </section>
+
+      {/* F15-AC5: posts tagged to this event are its Moments. */}
+      <section id="moments" className="space-y-3">
+        <div className="flex items-baseline justify-between">
+          <h2 className="font-bold">📸 {t("event.moments")}</h2>
+          <Link href={`/create?event=${event.id}`} className="text-sm font-semibold text-tent-600">
+            ＋ {t("create.moment")}
+          </Link>
+        </div>
+        {moments.items.length ? (
+          <PostGrid posts={moments.items.map((p) => toPostDTO(p, user?.id ?? null, lang))} />
+        ) : (
+          <p className="text-sm text-stone-500">{t("event.momentsEmpty")}</p>
+        )}
       </section>
     </article>
   );

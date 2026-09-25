@@ -4,11 +4,13 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { translator, type Lang, type MessageKey } from "@dinkuan/i18n";
 
+// PRD 6 main navigation (Hire joins in the marketplace milestone; profile and notifications are in the header).
 const items: { href: string; key: MessageKey; icon: string }[] = [
   { href: "/", key: "nav.home", icon: "🏠" },
+  { href: "/reels", key: "nav.reels", icon: "🎬" },
+  { href: "/create", key: "nav.create", icon: "➕" },
   { href: "/events", key: "nav.events", icon: "🎟" },
   { href: "/tickets", key: "nav.tickets", icon: "🎫" },
-  { href: "/profile", key: "nav.profile", icon: "👤" },
 ];
 
 export function BottomNav({ lang }: { lang: Lang }) {
@@ -16,7 +18,7 @@ export function BottomNav({ lang }: { lang: Lang }) {
   const path = usePathname();
   return (
     <nav className="fixed inset-x-0 bottom-0 z-20 border-t border-tent-100 bg-white/95 backdrop-blur">
-      <ul className="mx-auto grid max-w-2xl grid-cols-4">
+      <ul className="mx-auto grid max-w-2xl grid-cols-5">
         {items.map((it) => {
           const active = it.href === "/" ? path === "/" : path.startsWith(it.href);
           return (

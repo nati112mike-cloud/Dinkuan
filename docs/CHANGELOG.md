@@ -16,3 +16,16 @@ Built in demo mode so the platform can be shown before gateway and SMS contracts
 Not yet built: organiser dashboard and event creation (F2, F3, F11), Telegram bot (F7), refunds UI and payouts (F9, F11), promoter links (F10), admin (F12), notifications (F13), ticket transfer (F6-AC5), and everything in the social and marketplace pillars.
 
 - Hosting prep: Vercel + Neon guide (docs/DEPLOY.md), nightly demo-database workflow, Vercel cron for reconciliation, and checkouts now release lapsed holds on the same event.
+
+## Demo milestone 2: social
+
+- F14 profiles: usernames, Amharic display names, bio, link, sub-city, photo and cover, badges (verified, creator, organiser), counters, private accounts with follow requests, block and mute, share link with an Open Graph card, profile QR code.
+- F15 posts: text, photo carousels (1–10), meme editor, video/reels (up to 3 minutes), event tags, hashtags and @mentions, followers-only audience, 24-hour caption edits, delete, drafts saved on the phone. Photos are shrunk on the phone and uploads resume after a dropped connection. Every post passes screening (demo stand-in: spam-link check) before it goes public.
+- F16 feed: For You (engagement × recency × Addis locality × follow/same-event boost), Following, and the Events tab; full-screen reels with muted autoplay, tap to unmute, loop, progress, view counts, preloading of the next two, and low-data mode; reactions, one level of comment replies, comment likes, pin/hide/delete, keyword filter, share (copy link, Telegram, WhatsApp, repost) and saved collections; watch time tracking.
+- F17: onboarding with interests and at least 10 suggestions, suggestions from same events/mutual follows/interests/popularity, people search in Amharic and English, invite links with referral tracking.
+- F22-AC3 report button on posts, comments and profiles; F22-AC9 hourly rate limits on posts, comments and follows.
+- One visibility helper for every social query (CLAUDE.md rule 15), tested for blocks, mutes, private accounts, followers-only posts and screening.
+- Feed and reels use keyset cursors; `pnpm --filter @dinkuan/social bench` checks p95 < 300 ms with 100k posts (about 55 ms locally) and runs in CI.
+- Seed: 16 fictional Addis creators, 24 posts, 8 placeholder reels and event Moments.
+
+Demo shortcuts, to replace before launch: uploads are stored in Postgres (swap for object storage), videos are not transcoded (the seeded reels have a 240p copy for low-data mode), screening is a stub, and counters are updated in the same transaction rather than by a background job (rule 18). Contact sync (F17-AC2) and the invite reward are not built yet.

@@ -17,7 +17,15 @@ export type ErrorCode =
   | "EVENT_NOT_ON_SALE"
   | "RESERVATION_EXPIRED"
   | "PAYMENT_UNVERIFIED"
-  | "WEBHOOK_SIGNATURE";
+  | "WEBHOOK_SIGNATURE"
+  | "USERNAME_INVALID"
+  | "USERNAME_TAKEN"
+  | "BLOCKED"
+  | "EDIT_WINDOW_CLOSED"
+  | "RATE_LIMITED"
+  | "UPLOAD_TOO_LARGE"
+  | "UPLOAD_TYPE"
+  | "UPLOAD_INCOMPLETE";
 
 export class DomainError extends Error {
   constructor(

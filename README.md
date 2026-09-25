@@ -19,7 +19,7 @@ Demo accounts (code `123456`):
 
 | Phone | Role |
 |---|---|
-| 0911000001 | Buyer |
+| 0911000001 | Buyer (Hanna, @hanna.t, follows a few creators) |
 | 0911000002 | Gate scanner for both demo organisers |
 | 0911000003 | Organiser (Addis Nights Entertainment) |
 | 0911000004 | Admin |
@@ -37,13 +37,16 @@ pnpm db:deploy && pnpm db:seed
 pnpm dev                                  # web on :3000, scanner on :5173
 ```
 
-Re-run `pnpm db:seed` any time: it moves the demo events so "Tonight" and "This weekend" always have something on.
+Re-run `pnpm db:seed` any time: it moves the demo events so "Tonight" and "This weekend" always have something on, and moves the demo posts forward so the feed looks fresh. The seed includes 16 fictional Addis creators, posts, placeholder reels and event Moments.
+
+Hosting the demo online: see `docs/DEPLOY.md`.
 
 ## Checks
 
 ```bash
 pnpm lint && pnpm typecheck && pnpm test   # unit + database integration tests
-pnpm test:e2e                              # Playwright: buyer journey and offline gate scanning
+pnpm test:e2e                              # Playwright: buyer journey, offline gate scanning, social journey
+pnpm --filter @dinkuan/social bench        # feed speed with 100k posts (wipes dinkuan_social_test)
 ```
 
-Integration tests use a separate `dinkuan_test` database (`TEST_DATABASE_URL`).
+Integration tests use separate `dinkuan_test` (core) and `dinkuan_social_test` (social) databases; the social one is created on first run.

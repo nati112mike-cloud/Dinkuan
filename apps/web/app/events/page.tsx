@@ -1,4 +1,5 @@
 import { EventCard } from "@/components/EventCard";
+import { EventsDiscovery } from "@/components/EventsDiscovery";
 import { CATEGORIES, findEvents } from "@/lib/events";
 import { getT } from "@/lib/session";
 
@@ -9,6 +10,8 @@ type SP = Promise<Record<string, string | undefined>>;
 export default async function EventsPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const { lang, t } = await getT();
+  // No search or filters: show the discovery rows (Featured, Tonight, This weekend…).
+  if (!sp.q && !sp.date && !sp.pick && !sp.category && !sp.price) return <EventsDiscovery lang={lang} />;
   const events = await findEvents({ q: sp.q, date: sp.pick ? "date" : sp.date, pick: sp.pick, category: sp.category, price: sp.price });
   const select = "tap w-full rounded-xl border border-tent-200 bg-white px-3 text-sm";
   return (

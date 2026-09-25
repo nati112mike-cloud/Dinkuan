@@ -39,6 +39,10 @@ jobs:
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test
+      - name: Feed speed at 100k posts (CLAUDE.md rule 19)
+        run: pnpm --filter @dinkuan/social bench
+        env:
+          DATABASE_URL: postgresql://postgres:postgres@localhost:5432/dinkuan_social_test
       - name: Build
         run: pnpm build
       - name: Seed demo data

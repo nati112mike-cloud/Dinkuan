@@ -12,7 +12,9 @@ const PNG = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR
  */
 test("F2/F3/F11/F12: new organiser publishes a paid event with 3 tiers and sees the sale", async ({ page, browser }) => {
   test.setTimeout(180_000);
-  const orgName = `Rophnan Live ${Date.now().toString().slice(-5)}`;
+  const run = Date.now().toString().slice(-5);
+  const orgName = `Rophnan Live ${run}`;
+  const title = `Rophnan at Millennium Hall ${run}`;
 
   // F2-AC1: apply with TIN, trade licence and Telebirr payout.
   await login(page, freshPhone(), "/organiser", "Abel Organiser");
@@ -40,7 +42,7 @@ test("F2/F3/F11/F12: new organiser publishes a paid event with 3 tiers and sees 
   await expect(page.getByRole("heading", { name: orgName })).toBeVisible();
   await snap(page, "o03-dashboard-empty");
   await page.getByRole("link", { name: "+ New event" }).click();
-  await page.getByLabel("Title (English)").fill("Rophnan at Millennium Hall");
+  await page.getByLabel("Title (English)").fill(title);
   await page.getByLabel("Title (Amharic)").fill("ሮፍናን በሚሊኒየም አዳራሽ");
   await page.getByLabel("Category").selectOption("concert");
   await page.getByTestId("venue-select").selectOption({ label: "Millennium Hall" });
@@ -70,7 +72,7 @@ test("F2/F3/F11/F12: new organiser publishes a paid event with 3 tiers and sees 
   await page.getByRole("button", { name: "Save and review" }).click();
 
   // F3 step 3 and AC5: a new organiser's event goes to review first.
-  await expect(page.getByRole("heading", { name: "Rophnan at Millennium Hall" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: title })).toBeVisible();
   await expect(page.getByText("Early bird")).toBeVisible();
   await snap(page, "o06-review");
   await page.getByRole("button", { name: "Publish" }).click();
@@ -78,7 +80,7 @@ test("F2/F3/F11/F12: new organiser publishes a paid event with 3 tiers and sees 
   const eventUrl = page.url();
 
   await admin.goto("/admin");
-  const queued = admin.getByTestId("event-review").filter({ hasText: "Rophnan at Millennium Hall" });
+  const queued = admin.getByTestId("event-review").filter({ hasText: title });
   await expect(queued).toContainText("VIP 1,500");
   await queued.getByRole("button", { name: "Publish" }).click();
   await expect(queued).toHaveCount(0);
@@ -113,8 +115,8 @@ test("F2/F3/F11/F12: new organiser publishes a paid event with 3 tiers and sees 
 
   // F12-AC2: the admin features it.
   await admin.goto("/admin/events");
-  const row = admin.getByTestId("admin-event").filter({ hasText: "Rophnan at Millennium Hall" });
-  await row.getByRole("button", { name: "Feature" }).click();
+  const row = admin.getByTestId("admin-event").filter({ hasText: title });
+  await row.getByRole("button", { name: "Feature", exact: true }).click();
   await expect(row.getByRole("button", { name: "Unfeature" })).toBeVisible();
   await snap(admin, "o08-admin-events");
 });

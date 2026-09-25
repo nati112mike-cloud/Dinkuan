@@ -21,8 +21,10 @@ Demo accounts (code `123456`):
 |---|---|
 | 0911000001 | Buyer (Hanna, @hanna.t, follows a few creators) |
 | 0911000002 | Gate scanner for both demo organisers |
-| 0911000003 | Organiser (Addis Nights Entertainment) |
-| 0911000004 | Admin (ad review at /admin/ads) |
+| 0911000003 | Organiser (Addis Nights Entertainment): dashboard and new events at /organiser |
+| 0911000004 | Admin: review queues, fraud flags, featured events and audit log at /admin |
+| 0911000006 | New organiser (Arat Kilo Comedy Club) with an event waiting for review |
+| 0911000007 | Organiser application waiting for admin approval |
 | 0911100001 | Pro DJ (DJ Kaleb, @djkaleb): vendor dashboard, requests and chat |
 
 ## Run it locally

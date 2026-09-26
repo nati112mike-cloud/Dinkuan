@@ -9,10 +9,11 @@ export async function resetDb() {
 }
 
 let phoneCounter = 0;
-export async function makeUser(name = "Test Buyer") {
+/** A signed-up buyer, an adult unless `birthDate` says otherwise (null = joined before it was asked). */
+export async function makeUser(name = "Test Buyer", birthDate: Date | null = new Date("1995-05-05T00:00:00Z")) {
   phoneCounter += 1;
   const phone = `+2519${String(10000000 + phoneCounter).slice(-8)}`;
-  return prisma.user.create({ data: { phone, name, roles: { create: { role: "buyer" } } } });
+  return prisma.user.create({ data: { phone, name, birthDate, roles: { create: { role: "buyer" } } } });
 }
 
 export async function makeEvent(opts: { capacity?: number; price?: number; startsInHours?: number } = {}) {

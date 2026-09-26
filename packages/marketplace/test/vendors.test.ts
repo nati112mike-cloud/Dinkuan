@@ -20,6 +20,16 @@ import { inDays, makeEvent, member, resetDb, uploaded, vendor } from "./helpers"
 beforeEach(resetDb);
 
 describe("F20 pro profiles", () => {
+  it("F22-AC8: pro profiles are for adults, so teens get no messages from clients they don't know", async () => {
+    const teen = await member("Teen");
+    await prisma.user.update({ where: { id: teen.id }, data: { birthDate: new Date(`${new Date().getUTCFullYear() - 16}-01-01T00:00:00Z`) } });
+    await expect(saveVendorProfile(teen.id, { types: ["dj"], headline: "Teen DJ" })).rejects.toMatchObject({ code: "AGE_RESTRICTED" });
+    const legacy = await member("Legacy");
+    await prisma.user.update({ where: { id: legacy.id }, data: { birthDate: null } });
+    await expect(saveVendorProfile(legacy.id, { types: ["dj"], headline: "Wedding DJ" })).rejects.toMatchObject({ code: "BIRTH_DATE_REQUIRED" });
+    expect(await prisma.vendorProfile.count()).toBe(0);
+  });
+
   it("F20-AC1: a member becomes a vendor with a pro profile on top of their social profile", async () => {
     const u = await member("Kaleb", { username: "djkaleb" });
     await saveVendorProfile(u.id, {

@@ -1,5 +1,5 @@
 import { randomBytes } from "node:crypto";
-import { DomainError } from "@dinkuan/core";
+import { ageGroup, DomainError } from "@dinkuan/core";
 import { prisma, type Prisma, type Profile } from "@dinkuan/db";
 import { assertActive, screenText } from "@dinkuan/moderation";
 import { z } from "zod";
@@ -27,6 +27,8 @@ export async function ensureProfile(userId: string, opts: { referralCode?: strin
           userId,
           username: `${base}${suffix}`,
           displayName: user.name ?? "",
+          // F22-AC8: teen accounts are private by default.
+          isPrivate: ageGroup(user.birthDate) === "teen",
           referralCode: referralCode(),
           referredById: referrer && referrer.userId !== userId ? referrer.userId : null,
         },

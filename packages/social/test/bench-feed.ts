@@ -72,6 +72,10 @@ async function main() {
   const viewers = (await prisma.user.findMany({ take: RUNS, select: { id: true } })).map((u) => u.id);
   let i = 0;
   const next = () => viewers[i++ % viewers.length]!;
+  // F22-AC8: teens get extra filters (no 18+ or nightlife-tagged posts), so time them too.
+  const teens = viewers.slice(0, 20);
+  await prisma.user.updateMany({ where: { id: { in: teens } }, data: { birthDate: new Date(`${new Date().getUTCFullYear() - 15}-01-01T00:00:00Z`) } });
+  const nextTeen = () => teens[i++ % teens.length]!;
   const page3: [string, string | null][] = [];
   for (const v of viewers.slice(0, 20)) {
     const p1 = await forYouFeed(v);
@@ -87,6 +91,7 @@ async function main() {
     }),
     await time("Following (member)", () => followingFeed(next())),
     await time("Reels (member)", () => reelsFeed(next())),
+    await time("For You (teen)", () => forYouFeed(nextTeen())),
   ];
   const worst = Math.max(...results);
   console.log(worst < 300 ? `OK: worst p95 ${worst.toFixed(1)} ms < 300 ms` : `SLOW: worst p95 ${worst.toFixed(1)} ms`);

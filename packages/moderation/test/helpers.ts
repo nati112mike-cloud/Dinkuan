@@ -12,7 +12,7 @@ export async function member(name = "Member") {
   // Read the counter once: parallel calls would otherwise all see its final value after the await.
   const i = ++n;
   const user = await prisma.user.create({
-    data: { phone: `+2519${String(50000000 + i).slice(-8)}`, name, roles: { create: { role: "buyer" } } },
+    data: { phone: `+2519${String(50000000 + i).slice(-8)}`, name, birthDate: new Date("1995-05-05T00:00:00Z"), roles: { create: { role: "buyer" } } },
   });
   await prisma.profile.create({
     data: { userId: user.id, username: `m${i}_${Date.now() % 100000}`, displayName: name, referralCode: `R${i}X${Date.now() % 100000}` },

@@ -44,7 +44,10 @@ export type ErrorCode =
   | "ALREADY_APPEALED"
   | "APPEAL_SAME_MODERATOR"
   | "MOD_ACTION_INVALID"
-  | "ACCOUNT_HAS_OBLIGATIONS";
+  | "ACCOUNT_HAS_OBLIGATIONS"
+  | "UNDERAGE"
+  | "AGE_RESTRICTED"
+  | "BIRTH_DATE_REQUIRED";
 
 export class DomainError extends Error {
   constructor(

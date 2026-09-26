@@ -89,3 +89,13 @@ Still open from F22: age checks for nightlife content and gifting and teen accou
 - Settings → Your data: "Download my data" gives a JSON file of everything held about the member (account, consents, profile, posts, comments, likes, follows, orders, tickets, organiser and vendor records, chats they sent, reviews, promotions, reports, moderation decisions and appeals, notifications, uploads), with no secrets.
 - "Delete my account" (type DELETE to confirm): profile, posts, comments, likes, follows, uploads, vendor profile, reviews, shortlists, reports and notifications are deleted, sent chat messages are blanked, and other people's counters are corrected. Orders, tickets and ledger rows stay for the financial record, with the name and phone removed; the phone number can sign up again as a new account. Deletion waits while the member has upcoming tickets, an open order, a live event or a running promotion. Audit-logged.
 - Deleting a post now deletes its photos and videos too.
+
+## Launch hardening 4: age rules (F22-AC8)
+
+- Sign-up asks for a date of birth (stored as a date, PRD data model updated). Under 13 can't join: nothing is stored and the session ends. The date is set once; changing it goes through support.
+- Teen accounts (13 to 17) start private.
+- Nightlife events show an 18+ label on cards and the event page. Checkout for them needs an adult: teens are refused (`AGE_RESTRICTED`) and members who joined before birth dates were asked add one first (`BIRTH_DATE_REQUIRED`), from checkout or Settings.
+- Age-restricted posts are for signed-in adults only. Posts tagged to nightlife events, and nightlife event promotions, are hidden from teens. The visibility helper resolves the viewer's age in one place; the feed bench now includes a teen viewer.
+- New pro (vendor) profiles need an adult, so teens don't get messages from clients they don't know.
+
+Not built yet: gifting (F18) is Phase 2 and will use the same adult check. Age is self-declared; there is no ID check beyond the gate.

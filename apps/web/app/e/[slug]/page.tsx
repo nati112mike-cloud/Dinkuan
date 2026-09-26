@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { allInPrice, feePerTicket } from "@dinkuan/core";
+import { allInPrice, feePerTicket, isAdultCategory } from "@dinkuan/core";
 import { codeMatches } from "@dinkuan/core/server";
 import Link from "next/link";
 import { prisma } from "@dinkuan/db";
@@ -81,6 +81,12 @@ export default async function EventPage({ params, searchParams }: { params: Para
 
       <header className="space-y-2">
         <h1 className="text-2xl font-extrabold leading-tight">{title}</h1>
+        {isAdultCategory(event.category) && (
+          <p className="flex items-center gap-2 text-sm font-semibold text-stone-700" data-testid="adults-only">
+            <span className="rounded-md bg-stone-900 px-2 py-0.5 text-xs font-extrabold text-white">18+</span>
+            {t("age.adultsOnly")}
+          </p>
+        )}
         <p className="font-semibold text-tent-700">
           {formatLongDate(event.startsAt, lang)} · {formatTime(event.startsAt, lang)}
         </p>

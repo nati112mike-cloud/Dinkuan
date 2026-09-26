@@ -17,3 +17,4 @@ export * from "./admin";
 export * from "./outbox";
 export * from "./telegram";
 export * from "./privacy";
+export * from "./age";

@@ -1,4 +1,5 @@
 import { DomainError } from "@dinkuan/core";
+import { assertAdult } from "@dinkuan/core/server";
 import { prisma, type Prisma, type VendorProfile } from "@dinkuan/db";
 import { ensureProfile, visibleUsersWhere } from "@dinkuan/social";
 import { z } from "zod";
@@ -25,9 +26,14 @@ export const vendorInput = z.object({
 });
 export type VendorInput = z.input<typeof vendorInput>;
 
-/** Turns a member into a vendor (or updates their pro profile). */
+/**
+ * Turns a member into a vendor (or updates their pro profile). New pro profiles are for adults
+ * only: clients message vendors directly, and teens get no messages from adults they don't know
+ * (F22-AC8).
+ */
 export async function saveVendorProfile(userId: string, raw: VendorInput): Promise<VendorProfile> {
   const input = vendorInput.parse(raw);
+  if (!(await getVendor(userId))) await assertAdult(prisma, userId);
   await ensureProfile(userId);
   const data = { ...input, about: input.about ?? null, coverUrl: input.coverUrl ?? null };
   const v = await prisma.vendorProfile.upsert({ where: { userId }, create: { userId, ...data }, update: data });

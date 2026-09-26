@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
-import { orderTotals } from "@dinkuan/core";
+import { ageGroup, isAdultCategory, orderTotals } from "@dinkuan/core";
+import { BirthDateForm } from "@/components/BirthDateForm";
 import { CheckoutForm } from "@/components/CheckoutForm";
 import { getEventBySlug } from "@/lib/events";
 import { birr, eventTitle, formatDay, formatTime } from "@/lib/format";
@@ -30,6 +31,8 @@ export default async function CheckoutPage({ searchParams }: { searchParams: SP 
   if (lines.length === 0) redirect(`/e/${event.slug}`);
   const totals = orderTotals(lines, { feePctBps: event.feePctBps, feeFixedSantim: event.feeFixedSantim });
   const money = (s: number) => t("money.birr", { amount: birr(s) });
+  // F22-AC8: nightlife is 18+. Ask for a missing birth date here rather than failing at pay.
+  const age = isAdultCategory(event.category) ? ageGroup(user.birthDate) : "adult";
 
   return (
     <div className="space-y-5">
@@ -64,14 +67,25 @@ export default async function CheckoutPage({ searchParams }: { searchParams: SP 
           </div>
         </dl>
       </div>
-      <CheckoutForm
-        lang={lang}
-        eventId={event.id}
-        items={lines.map((l) => ({ ticketTypeId: l.id, qty: l.qty }))}
-        accessCode={sp.code?.slice(0, 20) ?? null}
-        total={totals.total}
-      />
-      <p className="text-center text-xs text-stone-500">{t("checkout.reserved")}</p>
+      {age === "adult" ? (
+        <CheckoutForm
+          lang={lang}
+          eventId={event.id}
+          items={lines.map((l) => ({ ticketTypeId: l.id, qty: l.qty }))}
+          accessCode={sp.code?.slice(0, 20) ?? null}
+          total={totals.total}
+        />
+      ) : age === "unknown" ? (
+        <div className="space-y-3 rounded-2xl bg-amber-50 p-4 ring-1 ring-amber-200" data-testid="age-check">
+          <p className="font-semibold">{t("age.confirmToBuy")}</p>
+          <BirthDateForm lang={lang} />
+        </div>
+      ) : (
+        <p className="rounded-2xl bg-red-50 p-4 font-semibold text-red-700" data-testid="age-check">
+          {t("error.AGE_RESTRICTED")}
+        </p>
+      )}
+      {age === "adult" && <p className="text-center text-xs text-stone-500">{t("checkout.reserved")}</p>}
     </div>
   );
 }

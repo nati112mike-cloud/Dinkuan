@@ -1,3 +1,4 @@
+import { ADULT_CATEGORIES } from "@dinkuan/core";
 import { prisma, type AdPlacementKey, type Campaign, type Prisma } from "@dinkuan/db";
 import { postInclude, visiblePostsWhere, visibleUsersWhere, withViewerState, type PostView } from "@dinkuan/social";
 import { addisDay, FREQUENCY_CAP_PER_DAY } from "./text";
@@ -71,7 +72,7 @@ export async function sponsoredPosts(
     where: {
       AND: [
         { id: { in: campaigns.map((c) => c.targetId) } },
-        visiblePostsWhere(viewerId, { feed: true }),
+        await visiblePostsWhere(viewerId, { feed: true }),
         { audience: "public" },
         ...(placement === "reels" ? [{ type: { in: ["video" as const, "reel" as const] } }] : []),
       ],
@@ -92,11 +93,18 @@ export async function sponsoredEvents(
   viewerKey: string | null,
   limit: number,
   now = new Date(),
+  /** F22-AC8: teens aren't shown nightlife promotions. */
+  opts: { teen?: boolean } = {},
 ) {
   const campaigns = await eligibleCampaigns(placement, viewerKey, { now, where: { targetType: "event" } });
   if (!campaigns.length || limit <= 0) return [];
   const events = await prisma.event.findMany({
-    where: { id: { in: campaigns.map((c) => c.targetId) }, status: "published", startsAt: { gt: now } },
+    where: {
+      id: { in: campaigns.map((c) => c.targetId) },
+      status: "published",
+      startsAt: { gt: now },
+      ...(opts.teen ? { category: { notIn: [...ADULT_CATEGORIES] } } : {}),
+    },
     include: { venue: true, organiser: true, ticketTypes: { orderBy: { sortOrder: "asc" } } },
   });
   const byId = new Map(events.map((e) => [e.id, e]));

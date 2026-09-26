@@ -8,7 +8,7 @@ async function buyTickets(request: APIRequestContext, qty: number): Promise<stri
   const phone = `09${String(Date.now()).slice(-8)}`;
   await request.post("/api/auth/otp/request", { data: { phone } });
   await request.post("/api/auth/otp/verify", { data: { phone, code: "123456" } });
-  await request.post("/api/me", { data: { name: "Abebe Kebede", acceptGuidelines: true } });
+  await request.post("/api/me", { data: { name: "Abebe Kebede", birthDate: "1995-05-05", acceptGuidelines: true } });
   const page = await request.get("/e/afro-house-rooftop-tonight");
   const html = await page.text();
   const eventId = /"eventId":"([0-9a-f-]{36})"/.exec(html)?.[1] ?? /eventId\\":\\"([0-9a-f-]{36})/.exec(html)?.[1];

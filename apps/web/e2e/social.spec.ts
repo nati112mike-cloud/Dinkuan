@@ -31,6 +31,7 @@ test("a new member joins, posts, comments, reacts and finds people", async ({ pa
   await page.getByLabel("6-digit code").fill("123456");
   await page.getByRole("button", { name: "Log in" }).click();
   await page.getByLabel(/Your name/).fill("Test Member");
+  await page.getByLabel("Date of birth").fill("1995-05-05");
   await page.getByLabel(/community guidelines/).check();
   await page.getByRole("button", { name: "Continue" }).click();
 

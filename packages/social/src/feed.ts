@@ -49,7 +49,7 @@ async function boostForViewer(posts: PostRow[], viewerId: string | null): Promis
 
 /** F16-AC1/AC6: For You — popular Addis content, ranked. */
 export async function forYouFeed(viewerId: string | null, cursor: string | null = null, take = 10): Promise<FeedPage> {
-  const { page, nextCursor } = await rankedPage(visiblePostsWhere(viewerId, { feed: true }), viewerId, cursor, take);
+  const { page, nextCursor } = await rankedPage(await visiblePostsWhere(viewerId, { feed: true }), viewerId, cursor, take);
   return { items: await withViewerState(await boostForViewer(page, viewerId), viewerId), nextCursor };
 }
 
@@ -57,7 +57,7 @@ export async function forYouFeed(viewerId: string | null, cursor: string | null 
 export async function followingFeed(viewerId: string, cursor: string | null = null, take = 10): Promise<FeedPage> {
   const where: Prisma.PostWhereInput = {
     AND: [
-      visiblePostsWhere(viewerId, { feed: true }),
+      await visiblePostsWhere(viewerId, { feed: true }),
       { OR: [{ authorId: viewerId }, { author: { followers: { some: { followerId: viewerId, status: "active" } } } }] },
     ],
   };
@@ -67,7 +67,7 @@ export async function followingFeed(viewerId: string, cursor: string | null = nu
 /** F16-AC7: the reels player — ranked videos. `startId` opens the player on a given reel. */
 export async function reelsFeed(viewerId: string | null, cursor: string | null = null, take = 6, startId?: string): Promise<FeedPage> {
   const where: Prisma.PostWhereInput = {
-    AND: [visiblePostsWhere(viewerId, { feed: true }), { type: { in: ["video", "reel"] } }],
+    AND: [await visiblePostsWhere(viewerId, { feed: true }), { type: { in: ["video", "reel"] } }],
   };
   const { page, nextCursor } = await rankedPage(where, viewerId, cursor, take);
   let items = page;

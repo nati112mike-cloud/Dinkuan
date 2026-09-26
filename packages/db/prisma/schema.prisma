@@ -120,6 +120,9 @@ model User {
   email          String?
   lang           Lang      @default(am)
   telegramChatId String?   @unique @map("telegram_chat_id")
+  /// F22-AC8: asked at sign-up. Under 13 can't join; 13-17 start private and can't buy nightlife
+  /// tickets or see 18+ posts. Null (older accounts) is treated as not yet an adult.
+  birthDate      DateTime? @map("birth_date") @db.Date
   /// F22-AC5: set by a suspension. Posting, commenting, messaging and following are blocked until then.
   suspendedUntil DateTime? @map("suspended_until") @db.Timestamptz
   /// F22-AC5: a ban ends every session and blocks login.

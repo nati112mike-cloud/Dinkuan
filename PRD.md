@@ -485,7 +485,7 @@ Which phase each feature ships in is defined in section 7.
 All IDs are UUIDs. All money is integer santim. All times are UTC `timestamptz`.
 
 ```
-User(id, phone UNIQUE, name, email?, lang[am|en], telegram_chat_id?, created_at)
+User(id, phone UNIQUE, name, email?, birth_date?, lang[am|en], telegram_chat_id?, created_at)
 Role(user_id, role[buyer|organiser|admin])
 
 Organiser(id, owner_user_id, name, tin?, licence_url?, type[business|individual],

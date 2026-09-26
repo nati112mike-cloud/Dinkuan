@@ -1,5 +1,7 @@
 import { prisma, Prisma, type Gateway, type Order } from "@dinkuan/db";
 import { DomainError } from "../errors";
+import { isAdultCategory } from "../age";
+import { assertAdult } from "./age";
 import { orderTotals } from "../fees";
 import { appUrl } from "./config";
 import { randomToken } from "./crypto";
@@ -110,6 +112,8 @@ export async function startCheckout(input: {
     if (!event || event.status !== "published" || (event.endsAt ?? event.startsAt) < now) {
       throw new DomainError("EVENT_NOT_ON_SALE");
     }
+    // F22-AC8: nightlife is 18+.
+    if (isAdultCategory(event.category)) await assertAdult(tx, input.userId, now);
 
     const pending = await tx.order.count({ where: { userId: input.userId, status: "pending" } });
     if (pending >= MAX_PENDING_ORDERS) throw new DomainError("TOO_MANY_PENDING_ORDERS");

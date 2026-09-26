@@ -6,3 +6,4 @@ export * from "./event-dates";
 export * from "./qr";
 export * from "./scan";
 export * from "./errors";
+export * from "./age";

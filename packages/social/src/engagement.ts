@@ -8,7 +8,7 @@ import { COMMENT_MAX, matchesHiddenWord } from "./text";
 import { isBlockedEitherWay, visiblePostsWhere, visibleUsersWhere } from "./visibility";
 
 async function visiblePost(postId: string, viewerId: string | null) {
-  const post = await prisma.post.findFirst({ where: { AND: [{ id: postId }, visiblePostsWhere(viewerId)] } });
+  const post = await prisma.post.findFirst({ where: { AND: [{ id: postId }, await visiblePostsWhere(viewerId)] } });
   if (!post) throw new DomainError("NOT_FOUND");
   return post;
 }
@@ -219,7 +219,7 @@ export async function toggleSave(userId: string, postId: string, collection = ""
 /** Saved posts grouped into private collections ("" is the default "All saved"). */
 export async function savedPosts(userId: string) {
   const rows = await prisma.savedPost.findMany({
-    where: { userId, post: visiblePostsWhere(userId) },
+    where: { userId, post: await visiblePostsWhere(userId) },
     orderBy: { createdAt: "desc" },
     include: { post: { include: { media: { orderBy: { orderIdx: "asc" }, take: 1 } } } },
     take: 300,

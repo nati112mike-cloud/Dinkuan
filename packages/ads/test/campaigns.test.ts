@@ -91,6 +91,15 @@ describe("F21 promotion packages", () => {
     expect(await sponsoredEvents("events_featured", "viewer", 3)).toHaveLength(1);
   });
 
+  it("F22-AC8: nightlife event promotions aren't shown to teens", async () => {
+    const organiser = await member("Organiser");
+    const event = await ownedEvent(organiser.id);
+    const c = await paidCampaign(organiser.id, { packageKey: "event_spotlight", targetType: "event", targetId: event.id });
+    await reviewCampaign((await admin()).id, c.id, true);
+    expect(await sponsoredEvents("events_featured", "adult", 3)).toHaveLength(1);
+    expect(await sponsoredEvents("events_featured", "teen", 3, new Date(), { teen: true })).toEqual([]);
+  });
+
   it("F21-AC5/AC8: a rejected promotion is refunded in full through the gateway", async () => {
     const creator = await member("Creator");
     const post = await createPost(creator.id, { type: "text", caption: "Come to my show" });

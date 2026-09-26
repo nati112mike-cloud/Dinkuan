@@ -196,7 +196,7 @@ export async function withViewerState(posts: PostRow[], viewerId: string | null)
 }
 
 export async function getPost(postId: string, viewerId: string | null): Promise<PostView | null> {
-  const post = await prisma.post.findFirst({ where: { AND: [{ id: postId }, visiblePostsWhere(viewerId)] }, include: postInclude });
+  const post = await prisma.post.findFirst({ where: { AND: [{ id: postId }, await visiblePostsWhere(viewerId)] }, include: postInclude });
   if (!post) return null;
   return (await withViewerState([post], viewerId))[0]!;
 }
@@ -223,7 +223,7 @@ export async function profilePosts(
   cursor: string | null = null,
   take = 24,
 ): Promise<Page> {
-  const base = visiblePostsWhere(viewerId);
+  const base = await visiblePostsWhere(viewerId);
   const where: Prisma.PostWhereInput =
     tab === "tagged"
       ? { AND: [base, { mentions: { some: { userId: authorId } } }] }
@@ -233,12 +233,12 @@ export async function profilePosts(
 
 /** F15-AC5: posts tagged to an event are its "Moments". */
 export async function eventMoments(eventId: string, viewerId: string | null, cursor: string | null = null, take = 12) {
-  return pageByTime({ AND: [visiblePostsWhere(viewerId), { eventId }] }, viewerId, cursor, take);
+  return pageByTime({ AND: [await visiblePostsWhere(viewerId), { eventId }] }, viewerId, cursor, take);
 }
 
 export async function hashtagPosts(tag: string, viewerId: string | null, cursor: string | null = null, take = 24) {
   return pageByTime(
-    { AND: [visiblePostsWhere(viewerId), { hashtags: { some: { hashtag: { tag: tag.toLowerCase() } } } }] },
+    { AND: [await visiblePostsWhere(viewerId), { hashtags: { some: { hashtag: { tag: tag.toLowerCase() } } } }] },
     viewerId,
     cursor,
     take,

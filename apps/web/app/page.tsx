@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { sponsoredEvents } from "@dinkuan/ads";
+import { ageGroup } from "@dinkuan/core";
 import { followingFeed, forYouFeed } from "@dinkuan/social";
 import { EventsDiscovery } from "@/components/EventsDiscovery";
 import { Feed } from "@/components/Feed";
@@ -46,7 +47,7 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
       items: tab === "foryou" ? await withSponsoredPosts(items, "feed", { viewerId: viewer, lang, firstPage: true }) : items,
       nextCursor: page.nextCursor,
     };
-    const [spotlight] = tab === "foryou" ? await sponsoredEvents("feed", await viewerKey(viewer), 1) : [];
+    const [spotlight] = tab === "foryou" ? await sponsoredEvents("feed", await viewerKey(viewer), 1, undefined, { teen: ageGroup(user?.birthDate) === "teen" }) : [];
     body = (
       <>
         {spotlight && <SponsoredEvent event={spotlight.event} campaignId={spotlight.campaignId} lang={lang} />}

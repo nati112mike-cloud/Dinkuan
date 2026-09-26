@@ -12,7 +12,7 @@ let n = 0;
 export async function member(name = "Member", opts: { username?: string } = {}) {
   n += 1;
   const user = await prisma.user.create({
-    data: { phone: `+2519${String(30000000 + n).slice(-8)}`, name, roles: { create: { role: "buyer" } } },
+    data: { phone: `+2519${String(30000000 + n).slice(-8)}`, name, birthDate: new Date("1995-05-05T00:00:00Z"), roles: { create: { role: "buyer" } } },
   });
   await ensureProfile(user.id);
   if (opts.username) await updateProfile(user.id, { username: opts.username });

@@ -334,8 +334,8 @@ async function main() {
       const c = v.create;
       const user = await prisma.user.upsert({
         where: { phone: c.phone },
-        update: {},
-        create: { phone: c.phone, name: c.name, roles: { create: { role: "buyer" } } },
+        update: { birthDate: new Date("1995-05-05T00:00:00Z") },
+        create: { phone: c.phone, name: c.name, birthDate: new Date("1995-05-05T00:00:00Z"), roles: { create: { role: "buyer" } } },
       });
       await ensureProfile(user.id);
       profile = await prisma.profile.update({

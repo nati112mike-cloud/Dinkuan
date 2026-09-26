@@ -10,11 +10,12 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
   const [normalized, setNormalized] = useState("");
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [birthDate, setBirthDate] = useState("");
   const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
-  async function call(url: string, body: unknown) {
+  async function call(url: string, body: unknown, onError?: (code: string | undefined) => void) {
     setBusy(true);
     setError(null);
     const res = await fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
@@ -23,6 +24,7 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
     if (!res.ok) {
       const key = `error.${json.error?.code}` as MessageKey;
       setError(t(key) === key ? t("error.generic") : t(key));
+      onError?.(json.error?.code);
       return null;
     }
     return json.data;
@@ -82,7 +84,10 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
           className="space-y-3"
           onSubmit={async (e) => {
             e.preventDefault();
-            const data = await call("/api/me", { name, lang, acceptGuidelines: true });
+            const data = await call("/api/me", { name, birthDate, lang, acceptGuidelines: true }, (code) => {
+              // F22-AC8: under 13 is signed out; back to the start with the reason shown.
+              if (code === "UNDERAGE") setStep("phone");
+            });
             // New members coming from the home page get the F17-AC1 onboarding; mid-checkout they carry on.
             if (data) window.location.href = next === "/" ? "/welcome" : next;
           }}
@@ -90,6 +95,11 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
           <label className="block space-y-1 font-semibold">
             {t("login.name")}
             <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={input} />
+          </label>
+          <label className="block space-y-1 font-semibold">
+            {t("age.birthDate")}
+            <input type="date" value={birthDate} max={new Date().toISOString().slice(0, 10)} onChange={(e) => setBirthDate(e.target.value)} autoComplete="bday" className={input} />
+            <span className="block text-xs font-normal text-stone-500">{t("age.birthDateHint")}</span>
           </label>
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-tent-600" />
@@ -107,7 +117,7 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
               </span>
             </span>
           </label>
-          <button disabled={busy || name.trim().length === 0 || !agreed} className={button}>
+          <button disabled={busy || name.trim().length === 0 || !birthDate || !agreed} className={button}>
             {t("login.saveName")}
           </button>
         </form>

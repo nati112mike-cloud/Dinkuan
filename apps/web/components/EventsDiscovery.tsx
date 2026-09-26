@@ -1,3 +1,4 @@
+import { ageGroup } from "@dinkuan/core";
 import Link from "next/link";
 import type { Lang } from "@dinkuan/i18n";
 import { translator } from "@dinkuan/i18n";
@@ -26,14 +27,15 @@ export async function EventsDiscovery({ lang }: { lang: Lang }) {
   const t = translator(lang);
   const user = await currentUser();
   const key = await viewerKey(user?.id ?? null);
+  const teen = ageGroup(user?.birthDate) === "teen";
   const [featured, tonight, weekend, upcoming, takeover, spotlight] = await Promise.all([
     findEvents({ featured: true, limit: 6 }),
     findEvents({ date: "today", limit: 8 }),
     findEvents({ date: "weekend", limit: 8 }),
     findEvents({ limit: 12 }),
     // F21-AC3: "Weekend Takeover" tops the page; "Event Spotlight" leads the Featured row.
-    sponsoredEvents("home_weekend", key, 1),
-    sponsoredEvents("events_featured", key, 2),
+    sponsoredEvents("home_weekend", key, 1, undefined, { teen }),
+    sponsoredEvents("events_featured", key, 2, undefined, { teen }),
   ]);
   const top = takeover[0];
   const spot = spotlight.filter((s) => s.event.id !== top?.event.id);

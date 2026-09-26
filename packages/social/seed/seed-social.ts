@@ -135,8 +135,8 @@ function mediaFor(m: Media, i: number) {
 async function userByPhone(phone: string, name: string) {
   return prisma.user.upsert({
     where: { phone },
-    update: {},
-    create: { phone, name, roles: { create: { role: "buyer" } } },
+    update: { birthDate: new Date("1995-05-05T00:00:00Z") },
+    create: { phone, name, birthDate: new Date("1995-05-05T00:00:00Z"), roles: { create: { role: "buyer" } } },
   });
 }
 

@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { adClickHref } from "@dinkuan/ads/text";
+import { isAdultCategory } from "@dinkuan/core";
 import { translator, type Lang } from "@dinkuan/i18n";
 import { isSoldOut, minAllIn, type EventCard as EventCardData } from "@/lib/events";
 import { birr, eventTitle, formatDay, formatTime } from "@/lib/format";
@@ -36,6 +37,11 @@ export function EventCard({
         {soldOut && (
           <span className="absolute left-3 top-3 rounded-full bg-black/80 px-3 py-1 text-xs font-bold text-white">
             {t("event.soldOut")}
+          </span>
+        )}
+        {isAdultCategory(event.category) && (
+          <span className="absolute right-3 top-3 rounded-md bg-stone-900/85 px-2 py-0.5 text-xs font-extrabold text-white" title={t("age.adultsOnly")}>
+            18+
           </span>
         )}
         {sponsored && <SponsoredLabel className="absolute bottom-2 left-2" />}

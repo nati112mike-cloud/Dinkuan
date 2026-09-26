@@ -39,6 +39,7 @@ test("buyer buys a ticket and sees a rotating QR", async ({ page }) => {
   await snap(page, "05-login-code");
   await page.getByRole("button", { name: "Log in" }).click();
   await page.getByLabel(/Your name/).fill("Selam Getachew");
+  await page.getByLabel("Date of birth").fill("1995-05-05");
   await page.getByLabel(/community guidelines/).check();
   await page.getByRole("button", { name: "Continue" }).click();
 

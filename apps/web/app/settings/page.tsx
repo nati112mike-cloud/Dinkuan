@@ -3,6 +3,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { blockedList, followRequests } from "@dinkuan/social";
 import { ActionButton } from "@/components/ActionButton";
+import { BirthDateForm } from "@/components/BirthDateForm";
 import { Avatar } from "@/components/Avatar";
 import { LegalLinks } from "@/components/LegalPage";
 import { RequestActions } from "@/components/RequestActions";
@@ -69,6 +70,13 @@ export default async function SettingsPage() {
           hiddenWords: profile.hiddenWords,
         }}
       />
+      {!me.user.birthDate && (
+        <section id="age" className="space-y-3" data-testid="add-birth-date">
+          <h2 className="text-lg font-bold">{t("age.title")}</h2>
+          <p className="text-sm text-stone-600">{t("age.missing")}</p>
+          <BirthDateForm lang={lang} />
+        </section>
+      )}
       <TelegramRow connected={!!me.user.telegramChatId} t={t} />
       <section id="requests" className="space-y-3">
         <h2 className="text-lg font-bold">{t("settings.requests")}</h2>

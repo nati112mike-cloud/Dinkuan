@@ -15,7 +15,7 @@ export async function snap(page: Page, name: string) {
 }
 
 /** Logs in with the demo OTP. New numbers are asked for a name first. */
-export async function login(page: Page, phone: string, next: string, name?: string) {
+export async function login(page: Page, phone: string, next: string, name?: string, birthDate = "1995-05-05") {
   await page.goto(`/login?next=${encodeURIComponent(next)}`);
   await page.getByLabel("Phone number").fill(phone);
   await page.getByRole("button", { name: "Send code" }).click();
@@ -23,6 +23,7 @@ export async function login(page: Page, phone: string, next: string, name?: stri
   await page.getByRole("button", { name: "Log in" }).click();
   if (name) {
     await page.getByLabel(/Your name/).fill(name);
+    await page.getByLabel("Date of birth").fill(birthDate);
     await page.getByLabel(/community guidelines/).check();
     await page.getByRole("button", { name: "Continue" }).click();
   }

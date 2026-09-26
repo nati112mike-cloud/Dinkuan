@@ -1,4 +1,4 @@
-import { acceptLegal } from "@dinkuan/core/server";
+import { acceptLegal, setBirthDate } from "@dinkuan/core/server";
 import { prisma } from "@dinkuan/db";
 import { acceptGuidelines, hasAcceptedGuidelines } from "@dinkuan/moderation";
 import { cookies } from "next/headers";
@@ -9,7 +9,9 @@ import { currentUser, LANG_COOKIE } from "@/lib/session";
 /**
  * Update name and language. Language also works logged out (cookie only).
  * Finishing sign-up (setting a name the first time) needs the terms, privacy policy and community
- * guidelines accepted (PRD 3, F22-AC1); each acceptance is logged as a consent.
+ * guidelines accepted (PRD 3, F22-AC1); each acceptance is logged as a consent. It also needs a
+ * birth date (F22-AC8): under 13 is refused and signed out. Members who signed up before birth
+ * dates were asked add one once, from settings.
  */
 export async function POST(req: Request) {
   try {
@@ -19,13 +21,17 @@ export async function POST(req: Request) {
         name: z.string().trim().min(1).max(80).optional(),
         lang: z.enum(["am", "en"]).optional(),
         acceptGuidelines: z.literal(true).optional(),
+        birthDate: z.string().optional(),
       }),
     );
     if (body.lang) {
       (await cookies()).set(LANG_COOKIE, body.lang, { path: "/", maxAge: 365 * 86400, sameSite: "lax" });
     }
     const user = await currentUser();
-    if (!user) return body.name ? fail("UNAUTHENTICATED") : ok({ ok: true });
+    if (!user) return body.name || body.birthDate ? fail("UNAUTHENTICATED") : ok({ ok: true });
+    const finishingSignUp = !!body.name && !user.name;
+    if (finishingSignUp && !user.birthDate && !body.birthDate) return fail("VALIDATION", "Enter your birth date");
+    if (body.birthDate && !user.birthDate) await setBirthDate(user.id, body.birthDate);
     if (body.acceptGuidelines) {
       await acceptGuidelines(user.id);
       await acceptLegal(user.id);

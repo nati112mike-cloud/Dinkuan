@@ -21,7 +21,7 @@ let n = 0;
 export async function member(name = "Member") {
   n += 1;
   const user = await prisma.user.create({
-    data: { phone: `+2519${String(40000000 + n).slice(-8)}`, name, roles: { create: { role: "buyer" } } },
+    data: { phone: `+2519${String(40000000 + n).slice(-8)}`, name, birthDate: new Date("1995-05-05T00:00:00Z"), roles: { create: { role: "buyer" } } },
   });
   await ensureProfile(user.id);
   return user;

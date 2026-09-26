@@ -233,11 +233,13 @@ async function main() {
     venueIds.set(v.key, row.id);
   }
 
+  // Demo accounts are adults, so every seeded event can be bought (F22-AC8).
+  const ADULT_BIRTH_DATE = new Date("1995-05-05T00:00:00Z");
   const user = async (phone: string, name: string, roles: ("buyer" | "organiser" | "admin")[]) =>
     prisma.user.upsert({
       where: { phone },
-      update: { name },
-      create: { phone, name, roles: { create: roles.map((role) => ({ role })) } },
+      update: { name, birthDate: ADULT_BIRTH_DATE },
+      create: { phone, name, birthDate: ADULT_BIRTH_DATE, roles: { create: roles.map((role) => ({ role })) } },
     });
 
   const buyer = await user("+251911000001", "Hanna Tesfaye", ["buyer"]);

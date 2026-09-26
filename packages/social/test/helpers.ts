@@ -9,10 +9,16 @@ export async function resetDb() {
 
 let n = 0;
 /** A member with a profile. */
-export async function member(name = "Member", opts: { private?: boolean; username?: string } = {}) {
+export async function member(name = "Member", opts: { private?: boolean; username?: string; birthDate?: Date | null } = {}) {
   n += 1;
   const user = await prisma.user.create({
-    data: { phone: `+2519${String(20000000 + n).slice(-8)}`, name, roles: { create: { role: "buyer" } } },
+    data: {
+      phone: `+2519${String(20000000 + n).slice(-8)}`,
+      name,
+      // Adults unless a test says otherwise (F22-AC8); null is an account from before birth dates were asked.
+      birthDate: opts.birthDate === undefined ? new Date("1995-05-05T00:00:00Z") : opts.birthDate,
+      roles: { create: { role: "buyer" } },
+    },
   });
   await ensureProfile(user.id);
   if (opts.private || opts.username) {

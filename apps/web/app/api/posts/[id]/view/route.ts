@@ -11,6 +11,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     await recordView((await params).id, user?.id ?? null, input.watchedMs, input.completed);
     return ok({ recorded: true });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

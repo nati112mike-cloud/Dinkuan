@@ -13,7 +13,7 @@ export async function POST(req: Request, { params }: Ctx) {
     const { type } = await parseJson(req, z.object({ type: z.enum(REACTIONS) }));
     return ok(await react(me.user.id, (await params).id, type));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }
 
@@ -23,6 +23,6 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     if (!me) return fail("UNAUTHENTICATED");
     return ok(await unreact(me.user.id, (await params).id));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, _req);
   }
 }

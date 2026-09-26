@@ -12,6 +12,6 @@ export async function POST(req: Request) {
     const m = await addTeamMember(user.id, organiserId, input);
     return ok({ userId: m.userId, role: m.role });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

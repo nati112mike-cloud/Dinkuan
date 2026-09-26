@@ -13,7 +13,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     if (!post) return fail("NOT_FOUND");
     return ok(toPostDTO(post, user?.id ?? null, await currentLang()));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, _req);
   }
 }
 
@@ -26,7 +26,7 @@ export async function PATCH(req: Request, { params }: Ctx) {
     const post = await editCaption(user.id, (await params).id, caption);
     return ok({ caption: post.caption, status: post.status });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }
 
@@ -37,6 +37,6 @@ export async function DELETE(_req: Request, { params }: Ctx) {
     await deletePost(user.id, (await params).id);
     return ok({ deleted: true });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, _req);
   }
 }

@@ -11,6 +11,6 @@ export async function POST(req: Request) {
     const { campaign, checkoutUrl } = await buyPromotion(me.user.id, input);
     return ok({ campaignId: campaign.id, checkoutUrl });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

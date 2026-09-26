@@ -13,6 +13,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const e = await setFeatured(user.id, (await params).id, featured);
     return ok({ featured: e.featured });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

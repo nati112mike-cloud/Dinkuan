@@ -13,6 +13,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const e = await reviewEvent(user.id, (await params).id, approve, note);
     return ok({ status: e.status });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

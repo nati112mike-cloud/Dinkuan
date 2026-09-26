@@ -44,6 +44,6 @@ export async function POST(req: Request) {
     }
     return ok({ ok: true });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

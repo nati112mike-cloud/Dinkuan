@@ -214,6 +214,18 @@ model OtpCode {
   @@map("otp_codes")
 }
 
+/// Fixed-window request counters for rate limits (per IP or per member). Old windows are
+/// deleted by the reconcile cron.
+model RateLimit {
+  key         String
+  windowStart DateTime @map("window_start") @db.Timestamptz
+  count       Int      @default(0)
+
+  @@id([key, windowStart])
+  @@index([windowStart])
+  @@map("rate_limits")
+}
+
 model Organiser {
   id            String          @id @default(uuid()) @db.Uuid
   ownerUserId   String          @map("owner_user_id") @db.Uuid

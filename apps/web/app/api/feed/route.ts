@@ -20,6 +20,6 @@ export async function GET(req: Request) {
     const withAds = tab === "following" ? items : await withSponsoredPosts(items, "feed", { viewerId: viewer, lang, firstPage: !cursor });
     return ok({ items: withAds, nextCursor: page.nextCursor });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

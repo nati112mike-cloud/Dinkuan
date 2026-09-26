@@ -20,6 +20,6 @@ export async function GET(req: Request) {
     );
     return ok({ items, nextCursor: page.nextCursor });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

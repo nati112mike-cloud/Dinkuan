@@ -1,7 +1,7 @@
 import { recordPhoneConsent, startCheckout } from "@dinkuan/core/server";
 import { z } from "zod";
 import { clickedCampaign } from "@/lib/ads";
-import { fail, handleError, ok, parseJson } from "@/lib/api";
+import { fail, handleError, limitByUser, ok, parseJson } from "@/lib/api";
 import { currentUser } from "@/lib/session";
 
 const schema = z.object({
@@ -18,10 +18,11 @@ export async function POST(req: Request) {
     const user = await currentUser();
     if (!user) return fail("UNAUTHENTICATED");
     const { sharePhone, ...body } = await parseJson(req, schema);
+    await limitByUser(user.id, "checkoutUser");
     const { order, checkoutUrl } = await startCheckout({ userId: user.id, ...body, campaignId: await clickedCampaign() });
     if (sharePhone !== undefined) await recordPhoneConsent(user.id, body.eventId, sharePhone);
     return ok({ orderId: order.id, checkoutUrl: checkoutUrl ?? `/orders/${order.id}` });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

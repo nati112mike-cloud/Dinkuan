@@ -11,6 +11,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { collection } = await parseJson(req, z.object({ collection: z.string().max(40).default("") }));
     return ok(await toggleSave(me.user.id, (await params).id, collection));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

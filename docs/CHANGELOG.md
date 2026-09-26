@@ -99,3 +99,11 @@ Still open from F22: age checks for nightlife content and gifting and teen accou
 - New pro (vendor) profiles need an adult, so teens don't get messages from clients they don't know.
 
 Not built yet: gifting (F18) is Phase 2 and will use the same adult check. Age is self-declared; there is no ID check beyond the gate.
+
+## Launch hardening 5: operations
+
+- Security headers on every web response: a same-origin Content-Security-Policy with no framing, HSTS, `nosniff`, `X-Frame-Options`, a strict referrer policy and a Permissions-Policy; `X-Powered-By` removed. The scanner gets its own set (camera allowed) in `apps/scanner/vercel.json`.
+- Rate limits per IP and per member (`rate_limits` table, one atomic upsert per request): login codes, code checks, checkout, uploads, data export, people search and promotion clicks and impressions. Over the limit returns `429 RATE_LIMITED` with `Retry-After`.
+- Structured JSON logs without query strings, bodies or phone numbers, and optional error reports to Sentry (`SENTRY_DSN`) from API errors, page render errors (`instrumentation.ts`) and Telegram jobs.
+- `GET /api/health` for uptime monitors.
+- Nightly encrypted database backup workflow (AES-256, verified by decrypting, kept 14 days), with a restore drill and runbook in `docs/OPERATIONS.md`.

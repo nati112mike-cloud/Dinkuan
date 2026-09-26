@@ -10,7 +10,7 @@ export async function POST(req: Request) {
     if (!cronAuthorized(req)) return fail("FORBIDDEN");
     return ok(await runTelegramJobs());
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }
 

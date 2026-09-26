@@ -11,6 +11,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const e = await setFeeOverride(user.id, (await params).id, await parseJson(req, feeInput));
     return ok({ feePctBps: e.feePctBps, feeFixedSantim: e.feeFixedSantim });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

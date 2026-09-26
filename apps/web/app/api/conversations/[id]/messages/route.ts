@@ -14,6 +14,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const dto: ChatMessageDTO = { id: m.id, body: m.body, masked: m.masked, removed: false, mine: true, createdAt: m.createdAt.toISOString() };
     return ok(dto);
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

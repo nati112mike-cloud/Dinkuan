@@ -2,6 +2,7 @@ import { recordClick } from "@dinkuan/ads";
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { z } from "zod";
+import { limitByIp } from "@/lib/api";
 import { AD_COOKIE, AD_COOKIE_DAYS, newVisitorId, VISITOR_COOKIE, viewerKey } from "@/lib/ads";
 import { currentUser } from "@/lib/session";
 
@@ -19,6 +20,9 @@ export async function GET(req: Request) {
   const url = new URL(req.url);
   const parsed = input.safeParse(Object.fromEntries(url.searchParams));
   if (!parsed.success) return NextResponse.redirect(new URL("/", url));
+  // Click floods from one IP aren't counted (they would inflate results and spend).
+  const limited = await limitByIp(req, "adEventIp").then(() => false, () => true);
+  if (limited) return NextResponse.redirect(new URL("/", url));
   const user = await currentUser();
   const jar = await cookies();
   let key = await viewerKey(user?.id ?? null);

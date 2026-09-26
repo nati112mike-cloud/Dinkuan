@@ -43,6 +43,21 @@ Demo shortcuts, to replace before launch: uploads are stored in Postgres (swap f
 
 Demo shortcuts: Weekend Takeover's reels boost and Telegram channel post wait for the bot (M4), and vendor stats for the seeded pros stand in for bookings made before ድንኳን.
 
+## Launch hardening 1: critical and high fixes from the audit
+
+The audit is in `/mnt/project-files/reviews/launch-readiness-audit.md` (63 findings). This round fixes:
+- S1: on a shared demo the admin signs in with a private `DEMO_STAFF_CODE` instead of 123456, and `APP_ENV=production` with `DEMO_MODE=true` refuses to run.
+- S2: wrong OTP guesses are counted atomically (parallel guesses can't beat the 5-attempt limit) and resending no longer resets the count.
+- S5: the login redirect uses `safeNextPath`, so `/login?next=/\evil.com` stays on the site.
+- S9: hidden ticket types need their code at checkout; event links with `?code=` show them.
+- S19/S20: cron routes always need `CRON_SECRET` (constant-time check); only the buyer can confirm their own demo payment.
+- R1: a webhook stored but never processed is taken over by the gateway's next retry instead of being dropped as a duplicate.
+- R2: reconciliation also checks orders that expired or failed in the last 48 hours, so a charge after a lost webhook still issues tickets.
+- R3: refunds are claimed under a row lock (one gateway call per order), and promotion stop/reject can't refund twice.
+- R4: a refund reverses exactly the ledger rows the order booked, so a failed sold-out refund retried by an admin no longer lowers the organiser's net.
+- R5: money that arrives for a cancelled event is refunded automatically and issues no tickets.
+- R6: order paid, failed, expired and refund decisions are audit-logged. R16: repeated ticket types in one checkout are merged.
+
 ## Demo milestone 4: dashboards, Telegram bot and demo polish
 
 - F2 organiser onboarding at `/organiser`: apply as a business (TIN, trade licence photo) or individual (free events only) with a Telebirr or bank payout; admins approve or reject with a reason, and the applicant is notified. Team members are added by phone as manager or scanner.

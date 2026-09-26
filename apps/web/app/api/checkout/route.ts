@@ -10,6 +10,7 @@ const schema = z.object({
   items: z.array(z.object({ ticketTypeId: z.uuid(), qty: z.number().int().min(0).max(50) })).min(1).max(10),
   /** Optional consent to share the buyer's phone with the organiser (F11-AC2, rule 12). */
   sharePhone: z.boolean().optional(),
+  accessCode: z.string().trim().max(20).optional().nullable(),
 });
 
 export async function POST(req: Request) {

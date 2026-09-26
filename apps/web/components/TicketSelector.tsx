@@ -22,12 +22,15 @@ export function TicketSelector({
   slug,
   types,
   loggedIn,
+  code,
 }: {
   lang: Lang;
   eventId: string;
   slug: string;
   types: SelectorType[];
   loggedIn: boolean;
+  /** Unlocks hidden ticket types at checkout (F3-AC3). */
+  code?: string | null;
 }) {
   const t = translator(lang);
   const router = useRouter();
@@ -40,7 +43,7 @@ export function TicketSelector({
       .filter(([, q]) => q > 0)
       .map(([id, q]) => `${id}:${q}`)
       .join(",");
-    const next = `/checkout?event=${slug}&items=${items}`;
+    const next = `/checkout?event=${slug}&items=${items}${code ? `&code=${encodeURIComponent(code)}` : ""}`;
     router.push(loggedIn ? next : `/login?next=${encodeURIComponent(next)}`);
   }
 

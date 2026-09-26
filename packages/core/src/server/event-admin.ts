@@ -3,9 +3,8 @@ import { z } from "zod";
 import { DomainError } from "../errors";
 import { audit } from "./audit";
 import { randomToken } from "./crypto";
-import { gatewayFor } from "./gateways";
-import { appendLedger } from "./ledger";
 import { assertCanManage, canSellPaid, notifyUser } from "./organisers";
+import { refundOrderInFull } from "./refunds";
 
 /** F3-AC5: a new organiser's first 3 events go through admin review. */
 export const REVIEWED_EVENTS = 3;
@@ -295,41 +294,4 @@ export async function cancelEvent(actorId: string, eventId: string, reason: stri
     else failed += 1;
   }
   return { orders: orders.length, refunded, failed };
-}
-
-/** Refunds one paid order in full. Returns false (and leaves refund_pending) if the gateway fails. */
-export async function refundOrderInFull(orderId: string, reason: string, actorId: string | null) {
-  const claimed = await prisma.order.updateMany({ where: { id: orderId, status: { in: ["paid", "refund_pending"] } }, data: { status: "refund_pending" } });
-  if (claimed.count === 0) return false;
-  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId }, include: { event: true } });
-  if (order.totalSantim === 0) {
-    await prisma.$transaction(async (tx) => {
-      await tx.order.update({ where: { id: orderId }, data: { status: "refunded" } });
-      await tx.ticket.updateMany({ where: { orderId }, data: { status: "void" } });
-    });
-    return true;
-  }
-  const res = await gatewayFor(order.gateway)
-    .refund(order.gatewayRef, order.totalSantim, reason)
-    .catch(() => ({ ok: false, refundRef: undefined }));
-  await prisma.$transaction(async (tx) => {
-    await tx.refund.create({
-      data: { orderId, amountSantim: order.totalSantim, reason, status: res.ok ? "done" : "failed", gatewayRef: res.refundRef ?? null, createdBy: actorId },
-    });
-    if (!res.ok) {
-      await audit({ actorUserId: actorId, action: "order.refund_failed", entity: "order", entityId: orderId, after: { reason } }, tx);
-      return;
-    }
-    await tx.order.update({ where: { id: orderId }, data: { status: "refunded" } });
-    await tx.ticket.updateMany({ where: { orderId }, data: { status: "refunded" } });
-    const ref = res.refundRef ?? order.gatewayRef;
-    if (order.subtotalSantim > 0) {
-      await appendLedger(tx, { organiserId: order.event.organiserId, orderId, type: "refund", amount: -order.subtotalSantim, ref });
-    }
-    if (order.feeSantim > 0) {
-      await appendLedger(tx, { organiserId: null, orderId, type: "refund", amount: -order.feeSantim, ref });
-    }
-    await audit({ actorUserId: actorId, action: "order.refund", entity: "order", entityId: orderId, after: { amount: order.totalSantim, reason, refundRef: res.refundRef } }, tx);
-  });
-  return res.ok;
 }

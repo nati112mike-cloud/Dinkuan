@@ -178,6 +178,14 @@ describe("F21 promotion packages", () => {
     expect((await prisma.campaign.findUniqueOrThrow({ where: { id: other.campaign.id } })).status).toBe("ended");
   });
 
+  it("R3: two stops at once refund the promotion only once", async () => {
+    const { campaign, creator } = await livePostCampaign();
+    const halfway = new Date(campaign.startsAt!.getTime() + 1.5 * 86_400_000);
+    const results = await Promise.allSettled([stopCampaign(creator.id, campaign.id, halfway), stopCampaign(creator.id, campaign.id, halfway)]);
+    expect(results.filter((r) => r.status === "fulfilled")).toHaveLength(1);
+    expect((await prisma.campaign.findUniqueOrThrow({ where: { id: campaign.id } })).refundedSantim).toBe(15_000);
+  });
+
   it("F21-AC3: Vendor Top Search pins the vendor for their type", async () => {
     const dj = await member("DJ");
     await saveVendorProfile(dj.id, { types: ["dj"], headline: "Wedding DJ" });

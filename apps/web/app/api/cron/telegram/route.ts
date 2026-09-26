@@ -1,4 +1,4 @@
-import { fail, handleError, ok } from "@/lib/api";
+import { cronAuthorized, fail, handleError, ok } from "@/lib/api";
 import { runTelegramJobs } from "@/lib/telegram";
 
 /**
@@ -7,9 +7,7 @@ import { runTelegramJobs } from "@/lib/telegram";
  */
 export async function POST(req: Request) {
   try {
-    const secret = process.env.CRON_SECRET;
-    if (secret && req.headers.get("authorization") !== `Bearer ${secret}`) return fail("FORBIDDEN");
-    if (!secret && process.env.DEMO_MODE !== "true") return fail("FORBIDDEN");
+    if (!cronAuthorized(req)) return fail("FORBIDDEN");
     return ok(await runTelegramJobs());
   } catch (e) {
     return handleError(e);

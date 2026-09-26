@@ -11,6 +11,7 @@ export * from "./scanner";
 export * from "./audit";
 export * from "./organisers";
 export * from "./event-admin";
+export * from "./refunds";
 export * from "./dashboard";
 export * from "./admin";
 export * from "./outbox";

@@ -3,10 +3,12 @@ import { DomainError } from "../errors";
 import { orderTotals } from "../fees";
 import { appUrl } from "./config";
 import { randomToken } from "./crypto";
+import { audit } from "./audit";
 import { gatewayFor } from "./gateways";
 import { appendLedger, recordAdConversion } from "./ledger";
 import { enqueueOutbound } from "./outbox";
 import { failCampaignPayment, markCampaignPaid } from "./promotions";
+import { refundOrderInFull } from "./refunds";
 import { ensureEventSigningKey } from "./signing-keys";
 
 export const RESERVATION_MS = 10 * 60 * 1000; // F5-AC3
@@ -30,13 +32,15 @@ interface LockedTicketType {
   per_order_max: number;
   sales_start: Date | null;
   sales_end: Date | null;
+  visibility: string;
+  access_code: string | null;
 }
 
 /** Row-locks ticket types in a stable order so concurrent checkouts cannot deadlock or oversell. */
 async function lockTicketTypes(tx: Tx, ids: string[]): Promise<Map<string, LockedTicketType>> {
   const sorted = [...new Set(ids)].sort();
   const rows = await tx.$queryRaw<LockedTicketType[]>`
-    SELECT id, event_id, price_santim, capacity, sold, reserved, per_order_max, sales_start, sales_end
+    SELECT id, event_id, price_santim, capacity, sold, reserved, per_order_max, sales_start, sales_end, visibility::text AS visibility, access_code
     FROM ticket_types WHERE id = ANY(${sorted}::uuid[]) ORDER BY id FOR UPDATE`;
   return new Map(rows.map((r) => [r.id, r]));
 }
@@ -67,6 +71,7 @@ export async function expireStaleOrders(now = new Date(), where: Prisma.OrderWhe
       if (!o || o.status !== "pending") return;
       if (o.holds_reservation) await releaseReservation(tx, id);
       await tx.order.update({ where: { id }, data: { status: "expired" } });
+      await audit({ actorUserId: null, action: "order.expire", entity: "order", entityId: id }, tx);
     });
   }
   return stale.length;
@@ -83,10 +88,15 @@ export async function startCheckout(input: {
   gateway: Gateway;
   /** F21-AC7: the promotion the buyer clicked (from the ad-click cookie), for attribution. */
   campaignId?: string | null;
+  /** F3-AC3: the code that unlocks hidden ticket types. */
+  accessCode?: string | null;
   now?: Date;
 }): Promise<{ order: Order; checkoutUrl: string | null }> {
   const now = input.now ?? new Date();
-  const items = input.items.filter((i) => i.qty > 0);
+  // The same ticket type twice in one request counts as one line (per-line limits apply to the sum).
+  const merged = new Map<string, number>();
+  for (const i of input.items) if (i.qty > 0) merged.set(i.ticketTypeId, (merged.get(i.ticketTypeId) ?? 0) + i.qty);
+  const items = [...merged].map(([ticketTypeId, qty]) => ({ ticketTypeId, qty }));
   if (items.length === 0) throw new DomainError("VALIDATION", "No tickets selected");
   // Release lapsed holds on this event too, so stock frees up even when the reconcile job runs rarely.
   await expireStaleOrders(now, { OR: [{ userId: input.userId }, { eventId: input.eventId }] });
@@ -121,6 +131,9 @@ export async function startCheckout(input: {
     const lines = items.map((i) => {
       const t = types.get(i.ticketTypeId);
       if (!t || t.event_id !== event.id) throw new DomainError("NOT_FOUND", "Ticket type not found");
+      if (t.visibility === "hidden" && !codeMatches(t.access_code, input.accessCode)) {
+        throw new DomainError("NOT_FOUND", "Ticket type not found");
+      }
       if ((t.sales_start && t.sales_start > now) || (t.sales_end && t.sales_end < now)) {
         throw new DomainError("SALES_CLOSED");
       }
@@ -166,7 +179,7 @@ export async function startCheckout(input: {
 }
 
 
-export type MarkPaidResult = "paid" | "already_paid" | "refunded_sold_out" | "ignored";
+export type MarkPaidResult = "paid" | "already_paid" | "refunded_sold_out" | "refunded_cancelled" | "ignored";
 
 /**
  * Marks an order paid and issues tickets. Only call this after a verified webhook, a
@@ -188,6 +201,13 @@ export async function markOrderPaid(
       where: { id: orderId },
       include: { items: true, user: true, event: true },
     });
+    // Money that arrives for a cancelled event goes straight back; no tickets, no sale booked.
+    if (order.event.status === "cancelled") {
+      if (o.holds_reservation) await releaseReservation(tx, orderId);
+      await tx.order.update({ where: { id: orderId }, data: { status: "refund_pending", paidAt: now } });
+      await audit({ actorUserId: null, action: "order.paid_after_cancel", entity: "order", entityId: orderId, after: { source: ctx.source } }, tx);
+      return "refunded_cancelled";
+    }
     const types = await lockTicketTypes(
       tx,
       order.items.map((i) => i.ticketTypeId),
@@ -201,6 +221,7 @@ export async function markOrderPaid(
       });
       if (!fits) {
         await tx.order.update({ where: { id: orderId }, data: { status: "refund_pending", paidAt: now } });
+        await audit({ actorUserId: null, action: "order.paid_sold_out", entity: "order", entityId: orderId, after: { source: ctx.source } }, tx);
         return "refunded_sold_out";
       }
     }
@@ -217,6 +238,7 @@ export async function markOrderPaid(
       where: { id: orderId },
       data: { status: "paid", paidAt: now, holdsReservation: false },
     });
+    await audit({ actorUserId: null, action: "order.paid", entity: "order", entityId: orderId, after: { source: ctx.source, total: order.totalSantim } }, tx);
     await ensureEventSigningKey(order.eventId, tx);
     const holderName = order.user.name ?? "Guest";
     for (const i of order.items) {
@@ -254,29 +276,13 @@ export async function markOrderPaid(
     return "paid";
   });
 
-  if (result === "refunded_sold_out") await refundSoldOutOrder(orderId);
+  if (result === "refunded_sold_out") await refundOrderInFull(orderId, "SOLD_OUT_AFTER_EXPIRY", null);
+  if (result === "refunded_cancelled") await refundOrderInFull(orderId, "EVENT_CANCELLED", null);
   return result;
 }
 
-async function refundSoldOutOrder(orderId: string) {
-  const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
-  const res = await gatewayFor(order.gateway)
-    .refund(order.gatewayRef, order.totalSantim, "Paid after reservation expired; sold out")
-    .catch(() => ({ ok: false, refundRef: undefined }));
-  await prisma.$transaction(async (tx) => {
-    await tx.refund.create({
-      data: {
-        orderId,
-        amountSantim: order.totalSantim,
-        reason: "SOLD_OUT_AFTER_EXPIRY",
-        status: res.ok ? "done" : "failed",
-        gatewayRef: res.refundRef ?? null,
-      },
-    });
-    // F9-AC5: if the gateway refund fails the order stays refund_pending for an admin.
-    if (res.ok) await tx.order.update({ where: { id: orderId }, data: { status: "refunded" } });
-  });
-}
+/** How long an unfinished webhook is left to its first request before a retry takes it over. */
+export const WEBHOOK_RECLAIM_S = 60;
 
 /**
  * F5-AC6/AC7: handle a gateway webhook. The signature is checked by the gateway adapter,
@@ -301,8 +307,15 @@ export async function handlePaymentWebhook(
       },
     });
   } catch (e) {
-    if (e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002") return { status: "duplicate" };
-    throw e;
+    if (!(e instanceof Prisma.PrismaClientKnownRequestError && e.code === "P2002")) throw e;
+    // A retry of an event we stored but never finished processing is taken over and processed
+    // again (every step is idempotent). One that is processed, or still being processed by
+    // another request right now, is a duplicate.
+    const reclaimed = await prisma.$executeRaw`
+      UPDATE payment_events SET received_at = now()
+      WHERE gateway = ${gateway}::"Gateway" AND gateway_ref = ${parsed.ref} AND type = ${parsed.type}
+        AND processed = false AND received_at < now() - make_interval(secs => ${WEBHOOK_RECLAIM_S})`;
+    if (reclaimed === 0) return { status: "duplicate" };
   }
   const order = await prisma.order.findUnique({ where: { gatewayRef: parsed.ref } });
   const campaign = order ? null : await prisma.campaign.findUnique({ where: { gatewayRef: parsed.ref } });
@@ -341,13 +354,14 @@ async function failOrder(orderId: string) {
     if (!o || o.status !== "pending") return;
     if (o.holds_reservation) await releaseReservation(tx, orderId);
     await tx.order.update({ where: { id: orderId }, data: { status: "failed" } });
+    await audit({ actorUserId: null, action: "order.fail", entity: "order", entityId: orderId }, tx);
   });
 }
 
 /** Server-side verify for one order (used by the order page and reconciliation). */
 export async function verifyOrderWithGateway(orderId: string): Promise<Order> {
   const order = await prisma.order.findUniqueOrThrow({ where: { id: orderId } });
-  if (order.status === "pending" || order.status === "expired") {
+  if (order.status === "pending" || order.status === "expired" || order.status === "failed") {
     const check = await gatewayFor(order.gateway).verify(order.gatewayRef);
     if (check.status === "paid" && check.amountSantim === order.totalSantim) {
       await markOrderPaid(order.id, { source: "verify" });
@@ -356,16 +370,34 @@ export async function verifyOrderWithGateway(orderId: string): Promise<Order> {
   return prisma.order.findUniqueOrThrow({ where: { id: orderId } });
 }
 
-/** F5-AC8: every 10 minutes, verify pending orders older than 5 minutes, then expire stale ones. */
+/** How far back reconciliation looks for expired or failed orders the gateway may still have charged. */
+export const RECONCILE_LOOKBACK_MS = 48 * 3600 * 1000;
+
+/**
+ * F5-AC8: every 10 minutes, verify pending orders older than 5 minutes, then expire stale ones.
+ * Orders that expired or failed in the last 48 hours are checked too, so a buyer who was charged
+ * after a lost webhook still gets their tickets (or a refund if it sold out).
+ */
 export async function reconcilePendingOrders(now = new Date()) {
   const cutoff = new Date(now.getTime() - 5 * 60 * 1000);
   const pending = await prisma.order.findMany({
-    where: { status: "pending", createdAt: { lt: cutoff } },
+    where: {
+      totalSantim: { gt: 0 },
+      OR: [
+        { status: "pending", createdAt: { lt: cutoff } },
+        { status: { in: ["expired", "failed"] }, createdAt: { gt: new Date(now.getTime() - RECONCILE_LOOKBACK_MS) } },
+      ],
+    },
     select: { id: true },
   });
   for (const { id } of pending) await verifyOrderWithGateway(id).catch(() => undefined);
   const expired = await expireStaleOrders(now);
   return { checked: pending.length, expired };
+}
+
+/** Hidden ticket codes are matched without regard to case or surrounding spaces. */
+export function codeMatches(expected: string | null, given: string | null | undefined) {
+  return !!expected && !!given && expected.trim().toLowerCase() === given.trim().toLowerCase();
 }
 
 /** Only a campaign that exists and has been live can be credited with a sale. */

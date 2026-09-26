@@ -1,4 +1,5 @@
 import "server-only";
+import { createHash, timingSafeEqual } from "node:crypto";
 import { NextResponse } from "next/server";
 import { DomainError, type ErrorCode } from "@dinkuan/core";
 import { WebhookSignatureError } from "@dinkuan/payments";
@@ -46,4 +47,12 @@ export async function parseJson<T extends z.ZodType>(req: Request, schema: T): P
     throw new DomainError("VALIDATION", "Body must be JSON");
   });
   return schema.parse(body);
+}
+
+/** Cron routes always need `Authorization: Bearer $CRON_SECRET`, compared in constant time. */
+export function cronAuthorized(req: Request) {
+  const secret = process.env.CRON_SECRET;
+  if (!secret) return false;
+  const digest = (v: string) => createHash("sha256").update(v).digest();
+  return timingSafeEqual(digest(req.headers.get("authorization") ?? ""), digest(`Bearer ${secret}`));
 }

@@ -1,6 +1,6 @@
 import { DomainError } from "@dinkuan/core";
 import { audit, refundCampaign, startCampaignPayment, unspentSantim } from "@dinkuan/core/server";
-import { prisma, type Campaign, type Gateway, type PromoTarget } from "@dinkuan/db";
+import { prisma, type Campaign, type Gateway, type Prisma, type PromoTarget } from "@dinkuan/db";
 import { notify, screenText } from "@dinkuan/social";
 import { z } from "zod";
 import { PROMO_TARGETS } from "./text";
@@ -119,6 +119,13 @@ export async function adReviewQueue() {
   );
 }
 
+/** Locks the campaign row and checks it is still in the status the caller decided on. */
+async function claimStatus(tx: Prisma.TransactionClient, campaignId: string, expected: string) {
+  const [row] = await tx.$queryRaw<{ status: string }[]>`
+    SELECT status::text AS status FROM campaigns WHERE id = ${campaignId}::uuid FOR UPDATE`;
+  if (!row || row.status !== expected) throw new DomainError("CAMPAIGN_STATE");
+}
+
 /**
  * F21-AC5: a moderator approves or rejects a paid promotion. Approval starts the run now;
  * rejection refunds the whole budget through the gateway (AC8). Every decision is audit-logged
@@ -135,6 +142,8 @@ export async function reviewCampaign(adminId: string, campaignId: string, approv
       throw new DomainError("TARGET_NOT_ALLOWED", "This content can't be promoted");
     }
     const updated = await prisma.$transaction(async (tx) => {
+      // Only one decision wins: the status must still be what we read.
+      await claimStatus(tx, campaignId, c.status);
       const u = await tx.campaign.update({
         where: { id: campaignId },
         data: {
@@ -152,6 +161,7 @@ export async function reviewCampaign(adminId: string, campaignId: string, approv
     return updated;
   }
   await prisma.$transaction(async (tx) => {
+    await claimStatus(tx, campaignId, c.status);
     await tx.campaign.update({ where: { id: campaignId }, data: { status: "rejected", reviewedBy: adminId, reviewNote } });
     await audit({ actorUserId: adminId, action: "campaign.reject", entity: "campaign", entityId: campaignId, before: { status: c.status }, after: { status: "rejected", note: reviewNote } }, tx);
     await notify(tx, { recipientId: c.advertiserId, actorId: adminId, type: "campaign_rejected", href: `/promote/c/${c.id}` });
@@ -171,6 +181,8 @@ export async function stopCampaign(userId: string, campaignId: string, now = new
   if (c.status !== "active" && c.status !== "pending_review") throw new DomainError("CAMPAIGN_STATE");
   const refund = unspentSantim(c, now);
   await prisma.$transaction(async (tx) => {
+    // A double tap or a stop racing an ad rejection must not refund twice.
+    await claimStatus(tx, campaignId, c.status);
     await tx.campaign.update({
       where: { id: campaignId },
       data: { status: c.status === "active" ? "ended" : "cancelled", endsAt: c.status === "active" ? now : c.endsAt },

@@ -14,7 +14,8 @@ export async function POST(req: Request) {
       z.object({ phone: z.string().min(9).max(20), code: z.string().regex(/^\d{6}$/), client: z.enum(["web", "scanner"]).optional() }),
     );
     await limitByIp(req, "otpVerifyIp");
-    const { token, user, isNew } = await verifyOtp(body.phone, body.code);
+    // Audit S12: the gate app gets a short session that only works on the scanner API.
+    const { token, user, isNew } = await verifyOtp(body.phone, body.code, new Date(), body.client === "scanner" ? { scope: "scanner" } : {});
     const payload = { user: { id: user.id, name: user.name, phone: user.phone, lang: user.lang }, isNew };
     if (body.client === "scanner") return withCors(req, ok({ ...payload, token }));
     (await cookies()).set(SESSION_COOKIE, token, SESSION_COOKIE_OPTIONS);

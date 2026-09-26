@@ -35,3 +35,10 @@ test("one IP asking for too many login codes is slowed down", async ({ request }
   expect(statuses.slice(0, 10).every((s) => s === 200)).toBe(true);
   expect(statuses[10]).toBe(429);
 });
+
+test("S16: the first page load gives a browser its visitor id, but API calls don't", async ({ request }) => {
+  const page = await request.get("/events", { maxRedirects: 0 });
+  expect(page.headers()["set-cookie"] ?? "").toMatch(/dk_vid=v_[0-9a-f-]{36}/);
+  const api = await request.get("/api/health");
+  expect(api.headers()["set-cookie"] ?? "").not.toContain("dk_vid");
+});

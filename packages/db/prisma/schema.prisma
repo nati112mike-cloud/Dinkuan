@@ -194,6 +194,9 @@ model Session {
   id        String   @id @default(uuid()) @db.Uuid
   userId    String   @map("user_id") @db.Uuid
   tokenHash String   @unique @map("token_hash")
+  /// Audit S12: "scanner" sessions (from the gate app) only work on /api/scanner/* and expire
+  /// after 18 hours, so a lost gate phone doesn't give full account access. Null = full session.
+  scope     String?
   expiresAt DateTime @map("expires_at") @db.Timestamptz
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -780,6 +783,7 @@ model MediaBlob {
   createdAt   DateTime @default(now()) @map("created_at") @db.Timestamptz
   uploader    User     @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 
+  @@index([uploaderId, createdAt])
   @@map("media_blobs")
 }
 

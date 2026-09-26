@@ -1,6 +1,9 @@
 // Dinkuan service worker: keep the ticket wallet usable with no connection (PRD F6-AC4).
-// Network first for pages (fresh data when online), cache fallback when offline.
-const CACHE = "dinkuan-v1";
+// Network first for the wallet pages (fresh data when online), cache fallback when offline.
+// Only the wallet and static files are cached: other pages (admin, attendee lists, chats) can
+// hold personal data and must not stay on a shared phone. Logout clears this cache too.
+// Bumping the version deletes older caches that held every visited page.
+const CACHE = "dinkuan-v2";
 const OFFLINE_PAGES = ["/tickets"];
 
 self.addEventListener("install", (event) => {
@@ -34,14 +37,17 @@ self.addEventListener("fetch", (event) => {
     return;
   }
   if (req.mode === "navigate") {
+    const wallet = url.pathname === "/tickets" || url.pathname.startsWith("/tickets/");
     event.respondWith(
       fetch(req)
         .then((res) => {
-          const copy = res.clone();
-          caches.open(CACHE).then((c) => c.put(req, copy));
+          if (wallet && res.ok) {
+            const copy = res.clone();
+            caches.open(CACHE).then((c) => c.put(req, copy));
+          }
           return res;
         })
-        .catch(() => caches.match(req).then((hit) => hit || caches.match("/tickets"))),
+        .catch(() => caches.match(wallet ? req : "/tickets").then((hit) => hit || caches.match("/tickets"))),
     );
   }
 });

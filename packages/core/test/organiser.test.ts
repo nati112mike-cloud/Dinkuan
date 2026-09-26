@@ -178,7 +178,7 @@ describe("F3 event creation", () => {
     const a = await pay((await makeUser()).id, e.id, t!.id, 2);
     await pay((await makeUser()).id, e.id, t!.id, 1);
     const res = await cancelEvent(owner.id, e.id, "Venue flooded");
-    expect(res).toEqual({ orders: 2, refunded: 2, failed: 0 });
+    expect(res).toEqual({ orders: 2, refunded: 2, failed: 0, remaining: 0 });
     expect((await prisma.order.findUniqueOrThrow({ where: { id: a.id } })).status).toBe("refunded");
     expect(await prisma.ticket.count({ where: { eventId: e.id, status: "refunded" } })).toBe(3);
     expect(await prisma.refund.count({ where: { status: "done" } })).toBe(2);

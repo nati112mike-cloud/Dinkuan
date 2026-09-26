@@ -1,5 +1,5 @@
 import { endFinishedCampaigns } from "@dinkuan/ads";
-import { log, pruneRateLimits, reconcilePendingOrders } from "@dinkuan/core/server";
+import { log, pruneRateLimits, reconcilePendingCampaigns, reconcilePendingOrders, sweepCancelledEventRefunds } from "@dinkuan/core/server";
 import { cronAuthorized, fail, handleError, ok } from "@/lib/api";
 import { runTelegramJobs } from "@/lib/telegram";
 
@@ -8,6 +8,8 @@ export async function POST(req: Request) {
   try {
     if (!cronAuthorized(req)) return fail("FORBIDDEN");
     const orders = await reconcilePendingOrders();
+    const campaigns = await reconcilePendingCampaigns();
+    const cancelledEventRefunds = await sweepCancelledEventRefunds();
     const campaignsEnded = await endFinishedCampaigns();
     const rateLimitsPruned = await pruneRateLimits();
     // F7-AC3/AC4: queue 24h/3h event reminders and deliver the Telegram outbox (tickets from
@@ -17,7 +19,7 @@ export async function POST(req: Request) {
       log("error", "telegram cron jobs failed", { reason: e instanceof Error ? e.message : String(e) });
       return { configured: true as const, error: true };
     });
-    return ok({ ...orders, campaignsEnded, rateLimitsPruned, telegram });
+    return ok({ ...orders, campaigns, cancelledEventRefunds, campaignsEnded, rateLimitsPruned, telegram });
   } catch (e) {
     return handleError(e, req);
   }

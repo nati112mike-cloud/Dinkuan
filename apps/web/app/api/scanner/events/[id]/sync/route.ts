@@ -14,7 +14,7 @@ const schema = z.object({
 
 export async function POST(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await currentUser();
+    const user = await currentUser({ scanner: true });
     if (!user) return withCors(req, fail("UNAUTHENTICATED"));
     const { id } = await params;
     const { checkIns } = await parseJson(req, schema);

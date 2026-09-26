@@ -7,7 +7,7 @@ export const OPTIONS = preflight;
 
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   try {
-    const user = await currentUser();
+    const user = await currentUser({ scanner: true });
     if (!user) return withCors(req, fail("UNAUTHENTICATED"));
     const { id } = await params;
     return withCors(req, ok(await offlinePack(user, id)));

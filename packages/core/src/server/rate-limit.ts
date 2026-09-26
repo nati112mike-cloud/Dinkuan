@@ -12,6 +12,8 @@ export const RATE_LIMITS = {
   exportUser: { limit: 5, windowSec: 3600 },
   searchIp: { limit: 120, windowSec: 60 },
   adEventIp: { limit: 600, windowSec: 3600 },
+  /** Logged-out reel views (signed-in views count once a day per post). */
+  viewIp: { limit: 300, windowSec: 3600 },
 } as const;
 export type RateLimitName = keyof typeof RATE_LIMITS;
 

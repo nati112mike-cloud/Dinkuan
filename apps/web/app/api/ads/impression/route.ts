@@ -13,10 +13,12 @@ export async function POST(req: Request) {
     await limitByIp(req, "adEventIp");
     const { campaignId, placement } = await parseJson(req, z.object({ campaignId: z.uuid(), placement: z.enum(PLACEMENTS) }));
     const user = await currentUser();
-    let key = await viewerKey(user?.id ?? null);
+    const key = await viewerKey(user?.id ?? null);
     if (!key) {
-      key = newVisitorId();
-      (await cookies()).set(VISITOR_COOKIE, key, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 365 * 86400 });
+      // A new visitor id per request would dodge the 3-a-day cap, so the first one only sets the
+      // id and counts nothing (audit S16).
+      (await cookies()).set(VISITOR_COOKIE, newVisitorId(), { httpOnly: true, sameSite: "lax", path: "/", maxAge: 365 * 86400 });
+      return ok({ counted: false });
     }
     return ok({ counted: await recordImpression(campaignId, key, placement) });
   } catch (e) {

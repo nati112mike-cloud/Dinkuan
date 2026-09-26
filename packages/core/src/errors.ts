@@ -47,7 +47,8 @@ export type ErrorCode =
   | "ACCOUNT_HAS_OBLIGATIONS"
   | "UNDERAGE"
   | "AGE_RESTRICTED"
-  | "BIRTH_DATE_REQUIRED";
+  | "BIRTH_DATE_REQUIRED"
+  | "UPLOAD_QUOTA";
 
 export class DomainError extends Error {
   constructor(

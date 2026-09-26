@@ -26,11 +26,13 @@ export async function GET(req: Request) {
   const user = await currentUser();
   const jar = await cookies();
   let key = await viewerKey(user?.id ?? null);
+  // A visitor without an id yet (a bot, or cookies cleared on every request) isn't counted (audit S16).
+  const known = !!key;
   if (!key) {
     key = newVisitorId();
     jar.set(VISITOR_COOKIE, key, { httpOnly: true, sameSite: "lax", path: "/", maxAge: 365 * 86400 });
   }
-  const result = await recordClick(parsed.data.c, key, parsed.data.p);
+  const result = await recordClick(parsed.data.c, key, parsed.data.p, { countable: known });
   if (!result) return NextResponse.redirect(new URL("/", url));
   if (result.countable) {
     jar.set(AD_COOKIE, parsed.data.c, { httpOnly: true, sameSite: "lax", path: "/", maxAge: AD_COOKIE_DAYS * 86400 });

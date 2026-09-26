@@ -191,11 +191,16 @@ export async function deleteComment(userId: string, commentId: string) {
 export async function sharePost(userId: string, postId: string, type: ShareType, comment?: string) {
   await visiblePost(postId, userId);
   await assertActive(userId);
+  await assertUnderLimit("shares", userId);
   if (comment && screenText(comment).status !== "public") throw new DomainError("CONTENT_FLAGGED");
   return prisma.$transaction(async (tx) => {
+    // Audit S16: sharing the same post again doesn't count again.
+    const again = (await tx.share.count({ where: { postId, userId } })) > 0;
     const share = await tx.share.create({ data: { postId, userId, type, comment: comment?.trim().slice(0, 500) || null } });
-    await tx.post.update({ where: { id: postId }, data: { shareCount: { increment: 1 } } });
-    await refreshRank(tx, postId);
+    if (!again) {
+      await tx.post.update({ where: { id: postId }, data: { shareCount: { increment: 1 } } });
+      await refreshRank(tx, postId);
+    }
     return share;
   });
 }
@@ -228,13 +233,25 @@ export async function savedPosts(userId: string) {
   return { rows, collections };
 }
 
-export async function recordView(postId: string, viewerId: string | null, watchedMs: number, completed: boolean) {
+/**
+ * F16-AC9 watch time. Every watch is kept for creator analytics, but a signed-in member adds to a
+ * post's view and completion counts once a day (audit S16), so replays can't inflate ranking.
+ * Logged-out views are limited per IP at the route.
+ */
+export async function recordView(postId: string, viewerId: string | null, watchedMs: number, completed: boolean, now = new Date()) {
   await visiblePost(postId, viewerId);
   await prisma.$transaction(async (tx) => {
+    const since = new Date(now.getTime() - 86400_000);
+    const seen = viewerId
+      ? await tx.watchEvent.findMany({ where: { postId, userId: viewerId, createdAt: { gte: since } }, select: { completed: true } })
+      : [];
     await tx.watchEvent.create({ data: { postId, userId: viewerId, watchedMs: Math.max(0, Math.round(watchedMs)), completed } });
+    const newView = seen.length === 0;
+    const newCompletion = completed && !seen.some((w) => w.completed);
+    if (!newView && !newCompletion) return;
     await tx.post.update({
       where: { id: postId },
-      data: { viewCount: { increment: 1 }, ...(completed ? { completions: { increment: 1 } } : {}) },
+      data: { ...(newView ? { viewCount: { increment: 1 } } : {}), ...(newCompletion ? { completions: { increment: 1 } } : {}) },
     });
     await refreshRank(tx, postId);
   });

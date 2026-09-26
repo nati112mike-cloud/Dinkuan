@@ -1,7 +1,21 @@
 import { prisma } from "@dinkuan/db";
 import { beforeEach, describe, expect, it } from "vitest";
-import { hitRateLimit, parseDsn, pruneRateLimits, RATE_LIMITS, RateLimitError, safePath, sentryEnvelope } from "../src/server";
-import { resetDb } from "./helpers";
+import {
+  createSession,
+  handlePaymentWebhook,
+  hitRateLimit,
+  parseDsn,
+  pruneRateLimits,
+  RATE_LIMITS,
+  RateLimitError,
+  safePath,
+  SCANNER_SESSION_TTL_MS,
+  sentryEnvelope,
+  startCheckout,
+  sweepCancelledEventRefunds,
+  userForSession,
+} from "../src/server";
+import { gatewayMarksPaid, makeEvent, makeUser, resetDb, webhookFor } from "./helpers";
 
 beforeEach(resetDb);
 
@@ -48,5 +62,34 @@ describe("error reports", () => {
     expect(header.dsn).toBe("https://k@h/1");
     expect(item).toEqual({ type: "event" });
     expect(event).toMatchObject({ level: "error", exception: { values: [{ type: "Error", value: "boom" }] }, tags: { path: "/api/checkout", method: "POST" } });
+  });
+});
+
+describe("launch audit: sessions and cancelled events", () => {
+  it("S12: a scanner login only works on the scanner API and ends after 18 hours", async () => {
+    const u = await makeUser();
+    const now = new Date();
+    const token = await createSession(u.id, now, { scope: "scanner" });
+    expect(await userForSession(token, now)).toBeNull();
+    expect((await userForSession(token, now, { allowScanner: true }))?.id).toBe(u.id);
+    expect(await userForSession(token, new Date(now.getTime() + SCANNER_SESSION_TTL_MS + 1000), { allowScanner: true })).toBeNull();
+    // A normal session still works everywhere, including the scanner.
+    const full = await createSession(u.id, now);
+    expect((await userForSession(full, now))?.id).toBe(u.id);
+    expect((await userForSession(full, now, { allowScanner: true }))?.id).toBe(u.id);
+  });
+
+  it("R7: paid orders left on a cancelled event are refunded by the cron", async () => {
+    const made = await makeEvent();
+    const buyer = await makeUser();
+    const { order } = await startCheckout({ userId: buyer.id, eventId: made.event.id, items: [{ ticketTypeId: made.ticketType.id, qty: 1 }], gateway: "telebirr" });
+    await gatewayMarksPaid(order.gatewayRef);
+    const w = webhookFor(order.gatewayRef, order.totalSantim);
+    await handlePaymentWebhook("telebirr", w.body, w.headers);
+    // As if cancelEvent timed out right after marking the event cancelled.
+    await prisma.event.update({ where: { id: made.event.id }, data: { status: "cancelled" } });
+    expect(await sweepCancelledEventRefunds()).toEqual({ found: 1, refunded: 1 });
+    expect((await prisma.order.findUniqueOrThrow({ where: { id: order.id } })).status).toBe("refunded");
+    expect(await sweepCancelledEventRefunds()).toEqual({ found: 0, refunded: 0 });
   });
 });

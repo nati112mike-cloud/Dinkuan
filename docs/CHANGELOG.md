@@ -82,3 +82,10 @@ The audit is in `/mnt/project-files/reviews/launch-readiness-audit.md` (63 findi
 - Seed adds a second moderator (0911000008) for appeals and a couple of demo queue items.
 
 Still open from F22: age checks for nightlife content and gifting and teen accounts (AC8), and a real image/video classifier and vetted keyword lists, which need a provider and trust-and-safety input.
+
+## Launch hardening 3: privacy and data (PDPP 1321/2024)
+
+- Privacy Policy (`/privacy`) and Terms of Use (`/terms`) in Amharic and English. Sign-up now asks people to accept the terms, the privacy policy and the community guidelines; each is logged as a consent (`terms:v1`, `privacy:v1`, `guidelines:v1`). Both texts are drafts for legal review.
+- Settings → Your data: "Download my data" gives a JSON file of everything held about the member (account, consents, profile, posts, comments, likes, follows, orders, tickets, organiser and vendor records, chats they sent, reviews, promotions, reports, moderation decisions and appeals, notifications, uploads), with no secrets.
+- "Delete my account" (type DELETE to confirm): profile, posts, comments, likes, follows, uploads, vendor profile, reviews, shortlists, reports and notifications are deleted, sent chat messages are blanked, and other people's counters are corrected. Orders, tickets and ledger rows stay for the financial record, with the name and phone removed; the phone number can sign up again as a new account. Deletion waits while the member has upcoming tickets, an open order, a live event or a running promotion. Audit-logged.
+- Deleting a post now deletes its photos and videos too.

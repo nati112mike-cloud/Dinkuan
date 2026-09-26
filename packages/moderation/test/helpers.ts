@@ -9,12 +9,13 @@ export async function resetDb() {
 let n = 0;
 /** A member with a profile (made directly: this package sits below @dinkuan/social). */
 export async function member(name = "Member") {
-  n += 1;
+  // Read the counter once: parallel calls would otherwise all see its final value after the await.
+  const i = ++n;
   const user = await prisma.user.create({
-    data: { phone: `+2519${String(50000000 + n).slice(-8)}`, name, roles: { create: { role: "buyer" } } },
+    data: { phone: `+2519${String(50000000 + i).slice(-8)}`, name, roles: { create: { role: "buyer" } } },
   });
   await prisma.profile.create({
-    data: { userId: user.id, username: `m${n}_${Date.now() % 100000}`, displayName: name, referralCode: `R${n}X${Date.now() % 100000}` },
+    data: { userId: user.id, username: `m${i}_${Date.now() % 100000}`, displayName: name, referralCode: `R${i}X${Date.now() % 100000}` },
   });
   return user;
 }

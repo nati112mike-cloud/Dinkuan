@@ -1,3 +1,4 @@
+import { acceptLegal } from "@dinkuan/core/server";
 import { prisma } from "@dinkuan/db";
 import { acceptGuidelines, hasAcceptedGuidelines } from "@dinkuan/moderation";
 import { cookies } from "next/headers";
@@ -7,7 +8,8 @@ import { currentUser, LANG_COOKIE } from "@/lib/session";
 
 /**
  * Update name and language. Language also works logged out (cookie only).
- * Finishing sign-up (setting a name the first time) needs the community guidelines accepted (F22-AC1).
+ * Finishing sign-up (setting a name the first time) needs the terms, privacy policy and community
+ * guidelines accepted (PRD 3, F22-AC1); each acceptance is logged as a consent.
  */
 export async function POST(req: Request) {
   try {
@@ -24,7 +26,10 @@ export async function POST(req: Request) {
     }
     const user = await currentUser();
     if (!user) return body.name ? fail("UNAUTHENTICATED") : ok({ ok: true });
-    if (body.acceptGuidelines) await acceptGuidelines(user.id);
+    if (body.acceptGuidelines) {
+      await acceptGuidelines(user.id);
+      await acceptLegal(user.id);
+    }
     else if (body.name && !user.name && !(await hasAcceptedGuidelines(user.id))) return fail("VALIDATION", "Accept the community guidelines first");
     await prisma.user.update({ where: { id: user.id }, data: { name: body.name, lang: body.lang } });
     if (body.name) {

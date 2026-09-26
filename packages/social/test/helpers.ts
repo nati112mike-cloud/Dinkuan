@@ -30,7 +30,7 @@ export async function member(name = "Member", opts: { private?: boolean; usernam
 /** A finished upload of `bytes` bytes of the given type. */
 export async function uploaded(userId: string, contentType = "image/jpeg", bytes = 1000) {
   const up = await startUpload(userId, { contentType, size: bytes });
-  await appendChunk(userId, up.id, 0, new Uint8Array(bytes).fill(7));
+  await appendChunk(userId, up.id, 0, fakeFile(contentType, bytes));
   return up.id;
 }
 
@@ -75,4 +75,18 @@ export async function giveTicket(userId: string, event: Awaited<ReturnType<typeo
   return prisma.ticket.create({
     data: { orderId: order.id, ticketTypeId: event.ticketTypes[0]!.id, eventId: event.id, holderUserId: userId, holderName: "X" },
   });
+}
+
+/** `bytes` bytes that start like a real file of this type (uploads check the first bytes). */
+export function fakeFile(contentType: string, bytes: number) {
+  const heads: Record<string, number[]> = {
+    "image/jpeg": [0xff, 0xd8, 0xff, 0xe0],
+    "image/png": [0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a],
+    "image/gif": [0x47, 0x49, 0x46, 0x38, 0x39, 0x61],
+    "video/mp4": [0, 0, 0, 0x18, 0x66, 0x74, 0x79, 0x70, 0x69, 0x73, 0x6f, 0x6d],
+    "video/webm": [0x1a, 0x45, 0xdf, 0xa3],
+  };
+  const out = new Uint8Array(bytes).fill(7);
+  out.set((heads[contentType] ?? []).slice(0, bytes));
+  return out;
 }

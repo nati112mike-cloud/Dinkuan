@@ -68,6 +68,33 @@ export async function failCampaignPayment(campaignId: string) {
   await prisma.campaign.updateMany({ where: { id: campaignId, status: "pending_payment" }, data: { status: "cancelled" } });
 }
 
+/**
+ * Reconcile cron (audit R8): checks unpaid promotions with the gateway, like orders (F5-AC8).
+ * A payment the gateway calls failed, or that is still unpaid after an hour, is cancelled; a
+ * payment that lands later is still honoured by markCampaignPaid.
+ */
+export async function reconcilePendingCampaigns(now = new Date()) {
+  const pending = await prisma.campaign.findMany({
+    where: { status: "pending_payment", createdAt: { lt: new Date(now.getTime() - 5 * 60_000) } },
+    select: { id: true, gateway: true, gatewayRef: true, budgetSantim: true, createdAt: true },
+    take: 200,
+  });
+  let paid = 0;
+  let cancelled = 0;
+  for (const c of pending) {
+    const check = await gatewayFor(c.gateway)
+      .verify(c.gatewayRef)
+      .catch(() => null);
+    if (check?.status === "paid" && check.amountSantim === c.budgetSantim) {
+      if (await markCampaignPaid(c.id, { source: "verify" })) paid += 1;
+    } else if (check?.status === "failed" || c.createdAt < new Date(now.getTime() - 3600_000)) {
+      await failCampaignPayment(c.id);
+      cancelled += 1;
+    }
+  }
+  return { checked: pending.length, paid, cancelled };
+}
+
 /** Server-side verify for the return page and reconciliation. */
 export async function verifyCampaignWithGateway(campaignId: string): Promise<Campaign> {
   const c = await prisma.campaign.findUniqueOrThrow({ where: { id: campaignId } });

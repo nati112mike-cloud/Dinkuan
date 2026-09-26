@@ -15,12 +15,15 @@ export const SESSION_COOKIE_OPTIONS = {
   maxAge: SESSION_TTL_MS / 1000,
 };
 
-/** Current user from the session cookie, or from a Bearer token (scanner app). */
-export async function currentUser() {
+/**
+ * Current user from the session cookie, or from a Bearer token (scanner app). Scanner tokens
+ * only count on the scanner routes, which pass `{ scanner: true }` (audit S12).
+ */
+export async function currentUser(opts: { scanner?: boolean } = {}) {
   const auth = (await headers()).get("authorization");
   const bearer = auth?.startsWith("Bearer ") ? auth.slice(7) : null;
   const token = bearer ?? (await cookies()).get(SESSION_COOKIE)?.value;
-  return userForSession(token);
+  return userForSession(token, new Date(), { allowScanner: !!opts.scanner });
 }
 
 export async function currentLang(): Promise<Lang> {

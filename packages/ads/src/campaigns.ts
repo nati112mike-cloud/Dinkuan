@@ -201,7 +201,8 @@ export async function endFinishedCampaigns(now = new Date()) {
 
 export async function myCampaigns(userId: string) {
   return prisma.campaign.findMany({
-    where: { advertiserId: userId, status: { not: "pending_payment" } },
+    // Unpaid ones are listed too, so the advertiser can see a payment still being checked (audit R8).
+    where: { advertiserId: userId },
     include: { package: true },
     orderBy: { createdAt: "desc" },
     take: 50,

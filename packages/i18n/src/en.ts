@@ -87,7 +87,7 @@ export const en = {
   "tickets.offline": "Offline: showing saved tickets",
   "ticket.show": "Show this code at the gate",
   "ticket.rotates": "Code changes every 30 seconds",
-  "ticket.static": "Backup code (works without rotation)",
+  "ticket.refresh": "Connect to the internet once to load fresh codes for this ticket. If you connected Telegram, your backup code is there too.",
   "ticket.checkedIn": "Checked in",
   "ticket.holder": "Ticket holder",
   "login.title": "Log in with your phone",
@@ -931,4 +931,5 @@ export const en = {
   "error.UNDERAGE": "Sorry, you need to be 13 or older to use ድንኳን.",
   "error.AGE_RESTRICTED": "This is only for people aged 18 and over.",
   "error.BIRTH_DATE_REQUIRED": "This is only for people aged 18 and over. Add your date of birth in Settings first.",
+  "error.UPLOAD_QUOTA": "You've uploaded a lot today. Try again tomorrow.",
 } as const;

@@ -275,8 +275,12 @@ export async function reviewEvent(adminId: string, eventId: string, approve: boo
 /**
  * F3-AC7 / F9: cancelling a published event refunds every paid order in full through the gateway
  * (ticket price and fee), voids the tickets and books the refunds in the ledger. A refund the
- * gateway refuses leaves the order in refund_pending for an admin (F12-AC1).
+ * gateway refuses leaves the order in refund_pending for an admin (F12-AC1). A big event is
+ * refunded in batches: the first batch here, the rest by the reconcile cron (audit R7), so a
+ * request timeout can never leave paid orders on a cancelled event.
  */
+export const CANCEL_REFUND_BATCH = 50;
+
 export async function cancelEvent(actorId: string, eventId: string, reason: string) {
   const { event } = await managedEvent(actorId, eventId);
   if (event.status === "cancelled" || event.status === "ended") throw new DomainError("EVENT_STATE");
@@ -285,7 +289,8 @@ export async function cancelEvent(actorId: string, eventId: string, reason: stri
     await tx.event.update({ where: { id: eventId }, data: { status: "cancelled" } });
     await audit({ actorUserId: actorId, action: "event.cancel", entity: "event", entityId: eventId, before: { status: event.status }, after: { reason: why } }, tx);
   });
-  const orders = await prisma.order.findMany({ where: { eventId, status: "paid" } });
+  const total = await prisma.order.count({ where: { eventId, status: "paid" } });
+  const orders = await prisma.order.findMany({ where: { eventId, status: "paid" }, take: CANCEL_REFUND_BATCH, orderBy: { createdAt: "asc" } });
   let refunded = 0;
   let failed = 0;
   for (const order of orders) {
@@ -293,5 +298,18 @@ export async function cancelEvent(actorId: string, eventId: string, reason: stri
     if (ok) refunded += 1;
     else failed += 1;
   }
-  return { orders: orders.length, refunded, failed };
+  return { orders: total, refunded, failed, remaining: total - orders.length };
+}
+
+/** Reconcile cron: refunds paid orders still left on cancelled events, a batch at a time. */
+export async function sweepCancelledEventRefunds(limit = CANCEL_REFUND_BATCH) {
+  const orders = await prisma.order.findMany({
+    where: { status: "paid", event: { status: "cancelled" } },
+    take: limit,
+    orderBy: { createdAt: "asc" },
+    select: { id: true },
+  });
+  let refunded = 0;
+  for (const o of orders) if (await refundOrderInFull(o.id, "Event cancelled", null)) refunded += 1;
+  return { found: orders.length, refunded };
 }

@@ -3,7 +3,7 @@ import { expect, test, type APIRequestContext } from "@playwright/test";
 const SCANNER = process.env.SCANNER_URL ?? "http://localhost:5173";
 const shots = process.env.E2E_SCREENSHOTS;
 
-/** Buy tickets through the real API as the demo buyer, return their static QR payloads. */
+/** Buy tickets through the real API as the demo buyer, return their current rotating QR payloads. */
 async function buyTickets(request: APIRequestContext, qty: number): Promise<string[]> {
   const phone = `09${String(Date.now()).slice(-8)}`;
   await request.post("/api/auth/otp/request", { data: { phone } });
@@ -18,7 +18,12 @@ async function buyTickets(request: APIRequestContext, qty: number): Promise<stri
   const ref = decodeURIComponent(checkout.data.checkoutUrl.split("/demo-pay/")[1]);
   await request.post(`/api/demo-pay/${encodeURIComponent(ref)}`, { data: { action: "confirm" } });
   const wallet = await (await request.get("/api/tickets")).json();
-  return wallet.data.tickets.filter((t: { event: { slug: string } }) => t.event.slug === "afro-house-rooftop-tonight").map((t: { qr: { static: string } }) => t.qr.static);
+  // The wallet only carries rotating codes (audit S13); take each ticket's code for this window.
+  const window = Math.floor(Date.now() / 30_000);
+  type WalletTicket = { event: { slug: string }; qr: { rotating: { window: number; payload: string }[] } };
+  return wallet.data.tickets
+    .filter((t: WalletTicket) => t.event.slug === "afro-house-rooftop-tonight")
+    .map((t: WalletTicket) => (t.qr.rotating.find((r) => r.window === window) ?? t.qr.rotating[0]!).payload);
 }
 
 test("gate staff scan tickets offline and sync", async ({ page, request }) => {

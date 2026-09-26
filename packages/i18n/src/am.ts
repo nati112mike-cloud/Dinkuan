@@ -89,7 +89,7 @@ export const am: Messages = {
   "tickets.offline": "ከመስመር ውጭ፦ የተቀመጡ ትኬቶች",
   "ticket.show": "ይህን ኮድ በመግቢያው ላይ ያሳዩ",
   "ticket.rotates": "ኮዱ በየ30 ሰከንዱ ይቀየራል",
-  "ticket.static": "ተጠባባቂ ኮድ",
+  "ticket.refresh": "ለዚህ ትኬት አዲስ ኮዶችን ለመጫን አንድ ጊዜ ከኢንተርኔት ጋር ይገናኙ። ቴሌግራም ካገናኙ ተጠባባቂ ኮድዎ እዚያም አለ።",
   "ticket.checkedIn": "ገብቷል",
   "ticket.holder": "የትኬቱ ባለቤት",
   "login.title": "በስልክ ቁጥርዎ ይግቡ",
@@ -933,4 +933,5 @@ export const am: Messages = {
   "error.UNDERAGE": "ይቅርታ፣ ድንኳንን ለመጠቀም ቢያንስ 13 ዓመት መሆን አለብዎት።",
   "error.AGE_RESTRICTED": "ይህ ዕድሜያቸው 18 እና ከዚያ በላይ ለሆኑ ብቻ ነው።",
   "error.BIRTH_DATE_REQUIRED": "ይህ ዕድሜያቸው 18 እና ከዚያ በላይ ለሆኑ ብቻ ነው። መጀመሪያ በቅንብሮች ውስጥ የትውልድ ቀንዎን ያስገቡ።",
+  "error.UPLOAD_QUOTA": "ዛሬ ብዙ ፋይሎችን ሰቅለዋል። ነገ እንደገና ይሞክሩ።",
 };

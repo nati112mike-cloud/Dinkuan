@@ -64,7 +64,8 @@ export async function createRequest(
         eventDate: toDate(input.eventDate),
         startTime: input.startTime,
         venue: venue.text,
-        eventType: input.eventType,
+        // Free text shown to the vendor, so it is masked like the notes (audit S14).
+        eventType: maskContacts(input.eventType).text,
         guests: input.guests,
         budgetSantim: input.budgetSantim ?? null,
         notes: notes.text,

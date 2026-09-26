@@ -1,3 +1,4 @@
+import { DomainError } from "@dinkuan/core";
 import { isDemoMode } from "@dinkuan/core/server";
 import { CATEGORY_SEVERITY, SPAM_PATTERNS, termLists, type Category } from "./lists";
 import { normalise, squash } from "./normalise";
@@ -111,4 +112,13 @@ export async function screenMedia(items: { contentType: string; bytes: Uint8Arra
 /** Combines text and media results: the more severe one decides. */
 export function worstOf(...results: ScreeningResult[]): ScreeningResult {
   return results.reduce((a, b) => (b.severity > a.severity || (b.status === "removed" && a.status !== "removed") ? b : a), CLEAN);
+}
+
+/**
+ * CLAUDE.md rule 14 for text that is published as soon as it is saved (event titles and
+ * descriptions, vendor profiles): refuse anything screening doesn't pass, so it can be edited.
+ */
+export function assertCleanText(...parts: (string | null | undefined)[]) {
+  const text = parts.filter(Boolean).join("\n");
+  if (text && screenText(text).status !== "public") throw new DomainError("CONTENT_FLAGGED");
 }

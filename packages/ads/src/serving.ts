@@ -200,10 +200,16 @@ export async function campaignHref(c: Pick<Campaign, "targetType" | "targetId">)
 }
 
 /** Counts a click and returns where to send the viewer. */
-export async function recordClick(campaignId: string, viewerKey: string, placement: AdPlacementKey) {
+/**
+ * F21-AC7 clicks. One click per person per promotion per day counts (audit S16); repeats still
+ * go to the promoted thing. `countable: false` (a visitor with no id yet) never counts.
+ */
+export async function recordClick(campaignId: string, viewerKey: string, placement: AdPlacementKey, opts: { countable?: boolean; now?: Date } = {}) {
   const c = await prisma.campaign.findUnique({ where: { id: campaignId } });
   if (!c) return null;
-  if (c.status === "active" && c.placements.includes(placement)) {
+  const since = dayDate(opts.now ?? new Date());
+  const repeat = (await prisma.adClick.count({ where: { campaignId, viewerKey, createdAt: { gte: since } } })) > 0;
+  if (c.status === "active" && c.placements.includes(placement) && opts.countable !== false && !repeat) {
     await prisma.$transaction([
       prisma.adClick.create({ data: { campaignId, viewerKey, placement } }),
       prisma.campaign.update({ where: { id: campaignId }, data: { clicks: { increment: 1 } } }),

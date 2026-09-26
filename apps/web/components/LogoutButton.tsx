@@ -9,10 +9,17 @@ export function LogoutButton({ lang }: { lang: Lang }) {
       type="button"
       onClick={async () => {
         await fetch("/api/auth/logout", { method: "POST" });
+        // Nothing personal stays on the phone after logout: the offline wallet and cached pages.
         try {
-          localStorage.removeItem("dk_wallet");
+          for (const key of ["dk_wallet", "dk_draft", "dk_compare"]) localStorage.removeItem(key);
         } catch {
           // storage unavailable
+        }
+        if ("caches" in window) {
+          await caches
+            .keys()
+            .then((keys) => Promise.all(keys.map((k) => caches.delete(k))))
+            .catch(() => undefined);
         }
         window.location.href = "/";
       }}

@@ -5,6 +5,7 @@ import { assertActive, screenText } from "@dinkuan/moderation";
 import { z } from "zod";
 import { BIO_MAX, INTERESTS, normalizeUsername, usernameBase } from "./text";
 import { visibleUsersWhere } from "./visibility";
+import { assertOwnImage } from "./uploads";
 
 function referralCode() {
   return randomBytes(6).toString("base64url").replace(/[-_]/g, "x").slice(0, 8).toUpperCase();
@@ -71,6 +72,10 @@ export async function updateProfile(userId: string, raw: z.input<typeof profileI
   // F22-AC2: names, bios and links are public, so they are screened before they are saved.
   const shown = [input.displayName, input.bio, input.link, input.username].filter(Boolean).join("\n");
   if (shown && screenText(shown).status !== "public") throw new DomainError("CONTENT_FLAGGED");
+  for (const key of ["avatarUrl", "coverUrl"] as const) {
+    const url = input[key];
+    if (url && url !== current[key]) await assertOwnImage(userId, url);
+  }
   const data: Prisma.ProfileUpdateInput = { ...input, username: undefined };
   if (input.username !== undefined) {
     const u = normalizeUsername(input.username);

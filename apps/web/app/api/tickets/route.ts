@@ -4,8 +4,10 @@ import { fail, handleError, ok } from "@/lib/api";
 import { currentUser } from "@/lib/session";
 
 /**
- * Wallet data for offline use (F6-AC4): each ticket with its static QR and the next hour of
- * rotating QRs, so the app can keep rotating codes with no connection.
+ * Wallet data for offline use (F6-AC4): each ticket with its rotating QRs from now until the
+ * event ends (at least an hour, at most 12), so the app keeps rotating codes with no connection.
+ * The static code never comes here (audit S13): it doesn't expire, so a screenshot of it would
+ * work forever. It goes only to Telegram and SMS as the fallback.
  */
 export async function GET() {
   try {
@@ -20,7 +22,9 @@ export async function GET() {
     const data = await Promise.all(
       tickets.map(async (t) => {
         const upcoming = (t.event.endsAt ?? t.event.startsAt) > now;
-        const qr = upcoming && t.status === "valid" ? await ticketQrCodes(t, { now, minutes: 60 }) : null;
+        const untilEnd = Math.ceil(((t.event.endsAt ?? t.event.startsAt).getTime() - now.getTime()) / 60_000);
+        const minutes = Math.min(12 * 60, Math.max(60, untilEnd));
+        const qr = upcoming && t.status === "valid" ? { rotating: (await ticketQrCodes(t, { now, minutes })).rotating } : null;
         return {
           id: t.id,
           status: t.status,

@@ -45,6 +45,7 @@ export async function verifyOtp(
   rawPhone: string,
   code: string,
   now = new Date(),
+  opts: { scope?: SessionScope } = {},
 ): Promise<{ token: string; user: User; isNew: boolean }> {
   const phone = normalizeEthiopianPhone(rawPhone);
   if (!phone) throw new DomainError("INVALID_PHONE");
@@ -63,7 +64,7 @@ export async function verifyOtp(
   const used = await prisma.otpCode.deleteMany({ where: { phone, codeHash: otp.code_hash } });
   if (used.count === 0) throw new DomainError("OTP_INVALID");
   const { user, isNew } = await findOrCreateUserByPhone(phone);
-  const token = await createSession(user.id, now);
+  const token = await createSession(user.id, now, opts);
   return { token, user, isNew };
 }
 
@@ -82,25 +83,42 @@ export async function findOrCreateUserByPhone(phone: string): Promise<{ user: Us
   }
 }
 
-/** Starts a 30-day session and returns its token (only the hash is stored). */
-export async function createSession(userId: string, now = new Date()): Promise<string> {
+export type SessionScope = "scanner";
+/** Audit S12: a gate-phone session lasts one event day, not 30 days. */
+export const SCANNER_SESSION_TTL_MS = 18 * 3600_000;
+
+/**
+ * Starts a session and returns its token (only the hash is stored). Full sessions last 30 days;
+ * scanner sessions are limited to the scanner API and last 18 hours.
+ */
+export async function createSession(userId: string, now = new Date(), opts: { scope?: SessionScope } = {}): Promise<string> {
   // F22-AC5: banned accounts can't sign in again, by OTP or Telegram.
   const u = await prisma.user.findUnique({ where: { id: userId }, select: { bannedAt: true } });
   if (u?.bannedAt) throw new DomainError("ACCOUNT_BANNED");
   const token = randomToken();
   await prisma.session.create({
-    data: { userId, tokenHash: sha256(token), expiresAt: new Date(now.getTime() + SESSION_TTL_MS) },
+    data: {
+      userId,
+      tokenHash: sha256(token),
+      scope: opts.scope ?? null,
+      expiresAt: new Date(now.getTime() + (opts.scope === "scanner" ? SCANNER_SESSION_TTL_MS : SESSION_TTL_MS)),
+    },
   });
   return token;
 }
 
-export async function userForSession(token: string | undefined | null, now = new Date()) {
+/**
+ * The signed-in user for a session token. Scanner-scoped sessions only count where the caller
+ * says the scanner is allowed (the /api/scanner/* routes), never for the rest of the account.
+ */
+export async function userForSession(token: string | undefined | null, now = new Date(), opts: { allowScanner?: boolean } = {}) {
   if (!token) return null;
   const session = await prisma.session.findUnique({
     where: { tokenHash: sha256(token) },
     include: { user: { include: { roles: true } } },
   });
   if (!session || session.expiresAt < now || session.user.bannedAt) return null;
+  if (session.scope === "scanner" && !opts.allowScanner) return null;
   return session.user;
 }
 

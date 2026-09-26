@@ -1,9 +1,10 @@
 import { DomainError } from "@dinkuan/core";
 import { assertAdult } from "@dinkuan/core/server";
 import { prisma, type Prisma, type VendorProfile } from "@dinkuan/db";
-import { ensureProfile, visibleUsersWhere } from "@dinkuan/social";
+import { assertCleanText } from "@dinkuan/moderation";
+import { assertOwnImage, ensureProfile, visibleUsersWhere } from "@dinkuan/social";
 import { z } from "zod";
-import { levelFor, qualityScore, VENDOR_TYPES } from "./text";
+import { levelFor, maskContacts, qualityScore, VENDOR_TYPES } from "./text";
 
 type Db = Prisma.TransactionClient | typeof prisma;
 
@@ -33,9 +34,21 @@ export type VendorInput = z.input<typeof vendorInput>;
  */
 export async function saveVendorProfile(userId: string, raw: VendorInput): Promise<VendorProfile> {
   const input = vendorInput.parse(raw);
-  if (!(await getVendor(userId))) await assertAdult(prisma, userId);
+  const existing = await getVendor(userId);
+  if (!existing) await assertAdult(prisma, userId);
+  if (input.coverUrl && input.coverUrl !== existing?.coverUrl) await assertOwnImage(userId, input.coverUrl);
   await ensureProfile(userId);
-  const data = { ...input, about: input.about ?? null, coverUrl: input.coverUrl ?? null };
+  // Everything here is public, so it is screened (rule 14) and contact details are masked (rule 16).
+  assertCleanText(input.headline, input.about, ...input.services, ...input.equipment, ...input.genres);
+  const mask = (v: string) => maskContacts(v).text;
+  const data = {
+    ...input,
+    headline: mask(input.headline),
+    about: input.about ? mask(input.about) : null,
+    services: input.services.map(mask),
+    equipment: input.equipment.map(mask),
+    coverUrl: input.coverUrl ?? null,
+  };
   const v = await prisma.vendorProfile.upsert({ where: { userId }, create: { userId, ...data }, update: data });
   await refreshVendorStats(prisma, userId);
   return prisma.vendorProfile.findUniqueOrThrow({ where: { userId: v.userId } });
@@ -107,7 +120,13 @@ export async function getVendorPage(username: string, viewerId: string | null) {
     },
   });
   const verifiedGigs = vendor.albums.filter((a) => a.gigStatus === "verified").length;
-  return { profile, vendor, verifiedGigs };
+  // CLAUDE.md rule 16: outside links are a way around chat masking, so they show only to the
+  // vendor and to clients whose contact details are unlocked (deposit paid).
+  const linksVisible =
+    !!viewerId &&
+    (viewerId === profile.userId ||
+      (await prisma.conversation.count({ where: { vendorId: profile.userId, clientId: viewerId, contactUnlocked: true } })) > 0);
+  return { profile, vendor: linksVisible ? vendor : { ...vendor, socialLinks: [] as string[] }, verifiedGigs };
 }
 
 export type VendorPage = NonNullable<Awaited<ReturnType<typeof getVendorPage>>>;

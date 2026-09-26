@@ -107,3 +107,16 @@ Not built yet: gifting (F18) is Phase 2 and will use the same adult check. Age i
 - Structured JSON logs without query strings, bodies or phone numbers, and optional error reports to Sentry (`SENTRY_DSN`) from API errors, page render errors (`instrumentation.ts`) and Telegram jobs.
 - `GET /api/health` for uptime monitors.
 - Nightly encrypted database backup workflow (AES-256, verified by decrypting, kept 14 days), with a restore drill and runbook in `docs/OPERATIONS.md`.
+
+## Launch hardening 6: remaining audit fixes
+
+- Uploads: the first bytes must match the declared type (a renamed file is refused), and each member can upload up to 100 files or 300 MB a day (`UPLOAD_QUOTA`).
+- Profile, cover and vendor pictures must be the member's own finished image upload, never an outside URL.
+- Vendor profiles, event titles, descriptions and lineups pass the text screen before saving. Contact details in vendor text and booking requests are masked, and a vendor's social links show only after a deposit unlocks contact.
+- Shared phones: logging out clears the offline wallet, drafts and cached pages; the app only caches ticket pages for offline use.
+- Ticket QR codes are rotating only, signed from now until the event ends; an out-of-date wallet asks the buyer to reopen the ticket online.
+- Cancelling a big event refunds in batches of 50 and the reconcile job finishes the rest. Promotions stuck in "waiting for payment" are checked with the gateway and marked paid or cancelled.
+- Shares count once per member (and at most 50 a day), views once per member per day with a per-IP limit for visitors, and promotion clicks only from browsers with a visitor id, once a day, while the campaign is running. Every page load now gives a browser that id.
+- Scanner logins get their own 18-hour session that only works for scanner endpoints.
+
+Still open, needing infrastructure or a decision: admin two-factor login (S15), moving counters to background jobs (R9), a Redis job queue (L10) and a search service (L11).

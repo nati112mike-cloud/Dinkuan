@@ -13,7 +13,7 @@ export function TicketView({ lang, ticketId, onBack }: { lang: Lang; ticketId: s
   const t = translator(lang);
   const [ticket, setTicket] = useState<WalletTicket | null>(null);
   const [svg, setSvg] = useState<string>("");
-  const [rotating, setRotating] = useState(true);
+  const [expired, setExpired] = useState(false);
   const [secondsLeft, setSecondsLeft] = useState(30);
 
   useEffect(() => {
@@ -32,9 +32,9 @@ export function TicketView({ lang, ticketId, onBack }: { lang: Lang; ticketId: s
       const now = Date.now();
       setSecondsLeft(30 - (Math.floor(now / 1000) % 30));
       const qr = currentQr(ticket, now);
+      setExpired(!qr);
       if (!qr || qr.payload === last) return;
       last = qr.payload;
-      setRotating(qr.rotating);
       setSvg(await QRCode.toString(qr.payload, { type: "svg", margin: 1, errorCorrectionLevel: "M" }));
     };
     tick();
@@ -69,12 +69,20 @@ export function TicketView({ lang, ticketId, onBack }: { lang: Lang; ticketId: s
             <p className="py-16 text-xl font-bold text-emerald-700">✓ {t("ticket.checkedIn")}</p>
           ) : (
             <>
-              <p className="font-semibold">{t("ticket.show")}</p>
-              <div className="mx-auto w-64" data-testid="ticket-qr" dangerouslySetInnerHTML={{ __html: svg }} />
-              <div className="mx-auto h-1.5 w-64 overflow-hidden rounded-full bg-tent-100">
-                <div className="h-full bg-tent-500 transition-all" style={{ width: `${rotating ? (secondsLeft / 30) * 100 : 100}%` }} />
-              </div>
-              <p className="text-xs text-stone-500">{rotating ? t("ticket.rotates") : t("ticket.static")}</p>
+              {expired ? (
+                <p className="rounded-2xl bg-amber-50 p-4 text-sm font-semibold text-amber-900" data-testid="ticket-refresh">
+                  {t("ticket.refresh")}
+                </p>
+              ) : (
+                <>
+                  <p className="font-semibold">{t("ticket.show")}</p>
+                  <div className="mx-auto w-64" data-testid="ticket-qr" dangerouslySetInnerHTML={{ __html: svg }} />
+                  <div className="mx-auto h-1.5 w-64 overflow-hidden rounded-full bg-tent-100">
+                    <div className="h-full bg-tent-500 transition-all" style={{ width: `${(secondsLeft / 30) * 100}%` }} />
+                  </div>
+                  <p className="text-xs text-stone-500">{t("ticket.rotates")}</p>
+                </>
+              )}
             </>
           )}
           <div className="border-t border-dashed border-tent-200 pt-3 text-sm">

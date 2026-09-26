@@ -17,7 +17,7 @@ export interface WalletTicket {
     venue: string;
     posterUrl: string;
   };
-  qr: { static: string; rotating: { window: number; payload: string }[] } | null;
+  qr: { rotating: { window: number; payload: string }[] } | null;
 }
 
 export interface Wallet {
@@ -58,9 +58,10 @@ export async function loadWallet(): Promise<{ wallet: Wallet | null; offline: bo
   }
 }
 
-export function currentQr(t: WalletTicket, now = Date.now()): { payload: string; rotating: boolean } | null {
+/** The code for this 30-second window, or null when the cached codes have run out (go online once). */
+export function currentQr(t: WalletTicket, now = Date.now()): { payload: string } | null {
   if (!t.qr) return null;
   const w = Math.floor(now / 1000 / 30);
   const hit = t.qr.rotating.find((r) => r.window === w);
-  return hit ? { payload: hit.payload, rotating: true } : { payload: t.qr.static, rotating: false };
+  return hit ? { payload: hit.payload } : null;
 }

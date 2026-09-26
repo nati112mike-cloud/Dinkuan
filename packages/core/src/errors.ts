@@ -43,7 +43,8 @@ export type ErrorCode =
   | "CONTENT_FLAGGED"
   | "ALREADY_APPEALED"
   | "APPEAL_SAME_MODERATOR"
-  | "MOD_ACTION_INVALID";
+  | "MOD_ACTION_INVALID"
+  | "ACCOUNT_HAS_OBLIGATIONS";
 
 export class DomainError extends Error {
   constructor(

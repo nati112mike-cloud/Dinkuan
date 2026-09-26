@@ -94,10 +94,17 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
           <label className="flex items-start gap-3 text-sm">
             <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-tent-600" />
             <span>
-              {t("login.guidelines")}{" "}
-              <a href="/guidelines" target="_blank" className="font-semibold text-tent-700 underline">
-                {t("login.guidelinesRead")}
-              </a>
+              {t("login.agree")}{" "}
+              <span className="whitespace-nowrap">
+                {(["terms", "privacy", "guidelines"] as const).map((k, i) => (
+                  <span key={k}>
+                    {i > 0 && " · "}
+                    <a href={`/${k}`} target="_blank" className="font-semibold text-tent-700 underline">
+                      {t(`legal.${k}`)}
+                    </a>
+                  </span>
+                ))}
+              </span>
             </span>
           </label>
           <button disabled={busy || name.trim().length === 0 || !agreed} className={button}>

@@ -126,3 +126,13 @@ describe("F15 posts", () => {
     expect(spam.status).toBe("restricted");
   });
 });
+
+describe("PDPP post deletion", () => {
+  it("PDPP: deleting a post deletes its uploaded files too", async () => {
+    const u = await member("Creator");
+    const blob = await uploaded(u.id);
+    const p = await createPost(u.id, { type: "photo", media: [{ blobId: blob, width: 10, height: 10 }] });
+    await deletePost(u.id, p.id);
+    expect(await prisma.mediaBlob.findUnique({ where: { id: blob } })).toBeNull();
+  });
+});

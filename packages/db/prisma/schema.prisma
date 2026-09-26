@@ -124,6 +124,9 @@ model User {
   suspendedUntil DateTime? @map("suspended_until") @db.Timestamptz
   /// F22-AC5: a ban ends every session and blocks login.
   bannedAt       DateTime? @map("banned_at") @db.Timestamptz
+  /// PDPP: set when the member deletes their account. The row stays, anonymised, so orders,
+  /// tickets and the ledger still add up.
+  deletedAt      DateTime? @map("deleted_at") @db.Timestamptz
   createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   roles          UserRole[]

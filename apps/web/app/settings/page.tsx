@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { blockedList, followRequests } from "@dinkuan/social";
+import { ActionButton } from "@/components/ActionButton";
 import { Avatar } from "@/components/Avatar";
+import { LegalLinks } from "@/components/LegalPage";
 import { RequestActions } from "@/components/RequestActions";
 import { SettingsForm } from "@/components/SettingsForm";
 import { getT, isAdmin } from "@/lib/session";
@@ -75,6 +77,24 @@ export default async function SettingsPage() {
       <section className="space-y-3">
         <h2 className="text-lg font-bold">{t("settings.blocked")}</h2>
         {blocked.length ? <ul className="space-y-2">{blocked.map((p) => row(p, "blocked"))}</ul> : <p className="text-stone-500">{t("settings.noBlocked")}</p>}
+      </section>
+      <section id="data" className="space-y-3" data-testid="your-data">
+        <h2 className="text-lg font-bold">{t("settings.data")}</h2>
+        <p className="text-sm text-stone-600">{t("settings.dataHint")}</p>
+        <div className="flex flex-wrap gap-2">
+          <a href="/api/me/export" download className="tap flex items-center rounded-xl bg-white px-4 text-sm font-bold ring-1 ring-tent-200">
+            ⬇ {t("settings.export")}
+          </a>
+          <ActionButton
+            lang={lang}
+            url="/api/me/delete"
+            label="settings.delete"
+            confirm="settings.deleteConfirm"
+            prompt={{ field: "confirm", label: "settings.deletePrompt" }}
+            tone="danger"
+          />
+        </div>
+        <LegalLinks t={t} />
       </section>
     </div>
   );

@@ -146,13 +146,22 @@ export async function editCaption(authorId: string, postId: string, caption: str
   });
 }
 
-/** F15-AC4: delete any time. */
+/** F15-AC4: delete any time. Its photos and videos are deleted with it. */
 export async function deletePost(userId: string, postId: string) {
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post) throw new DomainError("NOT_FOUND");
   if (post.authorId !== userId) throw new DomainError("FORBIDDEN");
+  const media = await prisma.media.findMany({ where: { postId }, select: { url: true, thumbUrl: true } });
+  const blobIds = media.flatMap((m) => [m.url, m.thumbUrl]).map((u) => u?.match(/^\/api\/media\/([\w-]+)$/)?.[1]).filter((x): x is string => !!x);
   await prisma.$transaction(async (tx) => {
     await tx.post.delete({ where: { id: postId } });
+    // The files go too (PDPP): only this member's own uploads, and only if nothing else uses them.
+    for (const id of blobIds) {
+      const url = mediaUrl(id);
+      if ((await tx.media.count({ where: { OR: [{ url }, { thumbUrl: url }] } })) === 0) {
+        await tx.mediaBlob.deleteMany({ where: { id, uploaderId: userId } });
+      }
+    }
     await tx.profile.update({
       where: { userId },
       data: { postsCount: { decrement: 1 }, likesReceived: { decrement: post.reactionCount } },

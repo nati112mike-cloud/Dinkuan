@@ -110,3 +110,30 @@ describe("F20 booking requests & chat", () => {
     await expect(createRequest(client.id, request(djs.at(-1)!.id))).rejects.toMatchObject({ code: "RATE_LIMITED" });
   });
 });
+
+describe("F22 moderation in marketplace chat", () => {
+  it("F22-AC2: threats and scams aren't delivered; suspended members can't message", async () => {
+    const dj = await vendor("Kaleb");
+    const client = await member("Client");
+    const { conversationId } = await createRequest(client.id, request(dj.id));
+    await expect(sendMessage(dj.id, conversationId, "Pay up or I will kill you")).rejects.toMatchObject({ code: "CONTENT_FLAGGED" });
+    await expect(createRequest(client.id, request(dj.id, { eventDate: inDays(45), notes: "guaranteed profit, send birr to win" }))).rejects.toMatchObject({
+      code: "CONTENT_FLAGGED",
+    });
+    await prisma.user.update({ where: { id: client.id }, data: { suspendedUntil: new Date(Date.now() + 86400_000) } });
+    await expect(sendMessage(client.id, conversationId, "hello")).rejects.toMatchObject({ code: "ACCOUNT_SUSPENDED" });
+  });
+
+  it("F22-AC4: a message a moderator removed shows as removed to both sides", async () => {
+    const dj = await vendor("Kaleb");
+    const client = await member("Client");
+    const { conversationId } = await createRequest(client.id, request(dj.id));
+    const m = await sendMessage(client.id, conversationId, "something rude");
+    await prisma.message.update({ where: { id: m.id }, data: { removedAt: new Date() } });
+    for (const who of [client.id, dj.id]) {
+      const convo = await getConversation(who, conversationId);
+      expect(convo.messages.find((x) => x.id === m.id)).toMatchObject({ removed: true, body: "" });
+    }
+    expect((await listConversations(dj.id))[0]!.lastMessage?.body).toBe("");
+  });
+});

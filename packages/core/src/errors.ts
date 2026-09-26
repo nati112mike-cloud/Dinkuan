@@ -37,7 +37,13 @@ export type ErrorCode =
   | "EVENT_STATE"
   | "PRICE_LOCKED"
   | "TYPE_HAS_SALES"
-  | "CAPACITY_BELOW_SOLD";
+  | "CAPACITY_BELOW_SOLD"
+  | "ACCOUNT_SUSPENDED"
+  | "ACCOUNT_BANNED"
+  | "CONTENT_FLAGGED"
+  | "ALREADY_APPEALED"
+  | "APPEAL_SAME_MODERATOR"
+  | "MOD_ACTION_INVALID";
 
 export class DomainError extends Error {
   constructor(

@@ -2,7 +2,7 @@ import type { getConversation } from "@dinkuan/marketplace";
 
 type Convo = Awaited<ReturnType<typeof getConversation>>;
 
-export type ChatMessageDTO = { id: string; body: string; masked: boolean; mine: boolean; createdAt: string };
+export type ChatMessageDTO = { id: string; body: string; masked: boolean; removed: boolean; mine: boolean; createdAt: string };
 export type ChatDTO = {
   id: string;
   asVendor: boolean;

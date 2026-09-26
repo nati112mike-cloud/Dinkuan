@@ -17,6 +17,7 @@
   "dependencies": {
     "@dinkuan/core": "workspace:*",
     "@dinkuan/db": "workspace:*",
+    "@dinkuan/moderation": "workspace:*",
     "zod": "^4.1.0"
   },
   "devDependencies": {

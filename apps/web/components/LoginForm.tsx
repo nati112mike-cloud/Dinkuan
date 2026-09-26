@@ -10,6 +10,7 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
   const [normalized, setNormalized] = useState("");
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
+  const [agreed, setAgreed] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -81,7 +82,7 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
           className="space-y-3"
           onSubmit={async (e) => {
             e.preventDefault();
-            const data = await call("/api/me", { name, lang });
+            const data = await call("/api/me", { name, lang, acceptGuidelines: true });
             // New members coming from the home page get the F17-AC1 onboarding; mid-checkout they carry on.
             if (data) window.location.href = next === "/" ? "/welcome" : next;
           }}
@@ -90,7 +91,16 @@ export function LoginForm({ lang, next, demo }: { lang: Lang; next: string; demo
             {t("login.name")}
             <input value={name} onChange={(e) => setName(e.target.value)} autoComplete="name" className={input} />
           </label>
-          <button disabled={busy || name.trim().length === 0} className={button}>
+          <label className="flex items-start gap-3 text-sm">
+            <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-tent-600" />
+            <span>
+              {t("login.guidelines")}{" "}
+              <a href="/guidelines" target="_blank" className="font-semibold text-tent-700 underline">
+                {t("login.guidelinesRead")}
+              </a>
+            </span>
+          </label>
+          <button disabled={busy || name.trim().length === 0 || !agreed} className={button}>
             {t("login.saveName")}
           </button>
         </form>

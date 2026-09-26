@@ -84,6 +84,9 @@ export async function findOrCreateUserByPhone(phone: string): Promise<{ user: Us
 
 /** Starts a 30-day session and returns its token (only the hash is stored). */
 export async function createSession(userId: string, now = new Date()): Promise<string> {
+  // F22-AC5: banned accounts can't sign in again, by OTP or Telegram.
+  const u = await prisma.user.findUnique({ where: { id: userId }, select: { bannedAt: true } });
+  if (u?.bannedAt) throw new DomainError("ACCOUNT_BANNED");
   const token = randomToken();
   await prisma.session.create({
     data: { userId, tokenHash: sha256(token), expiresAt: new Date(now.getTime() + SESSION_TTL_MS) },
@@ -97,7 +100,7 @@ export async function userForSession(token: string | undefined | null, now = new
     where: { tokenHash: sha256(token) },
     include: { user: { include: { roles: true } } },
   });
-  if (!session || session.expiresAt < now) return null;
+  if (!session || session.expiresAt < now || session.user.bannedAt) return null;
   return session.user;
 }
 

@@ -18,6 +18,7 @@ import { Avatar } from "@/components/Avatar";
 import { Caption } from "@/components/Caption";
 import { CompareBar, CompareToggle } from "@/components/CompareBar";
 import { PostGrid } from "@/components/PostGrid";
+import { ReportButton } from "@/components/ReportButton";
 import { ShareVendor } from "@/components/ShareVendor";
 import { ShortlistButton } from "@/components/ShortlistButton";
 import { LevelBadge, Stars } from "@/components/VendorCard";
@@ -271,6 +272,7 @@ export default async function VendorPage({ params }: { params: Params }) {
                     <span className="text-amber-500">{"★".repeat(r.stars)}{"☆".repeat(5 - r.stars)}</span>
                   </p>
                   <p className="text-sm">{r.body}</p>
+                  {viewer && viewer !== r.clientId && <ReportButton lang={lang} targetType="review" targetId={r.id} label="report.review" className="text-stone-400" />}
                   {r.vendorReply && (
                     <p className="rounded-xl bg-tent-50 p-2 text-xs">
                       <span className="font-bold">{t("review.reply", { name })}</span> {r.vendorReply}

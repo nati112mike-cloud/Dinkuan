@@ -1,5 +1,6 @@
 import { DomainError } from "@dinkuan/core";
 import { prisma, type Prisma } from "@dinkuan/db";
+import { assertActive } from "@dinkuan/moderation";
 import { assertUnderLimit } from "./limits";
 import { notify } from "./notifications";
 import { ensureProfile } from "./profiles";
@@ -21,6 +22,7 @@ async function removeFollow(tx: Tx, followerId: string, followeeId: string) {
 export async function follow(viewerId: string, targetId: string): Promise<"active" | "requested"> {
   if (viewerId === targetId) throw new DomainError("VALIDATION", "You can't follow yourself");
   if (await isBlockedEitherWay(viewerId, targetId)) throw new DomainError("BLOCKED");
+  await assertActive(viewerId);
   await ensureProfile(viewerId);
   const target = await ensureProfile(targetId);
   const existing = await prisma.follow.findUnique({

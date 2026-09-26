@@ -66,3 +66,19 @@ The audit is in `/mnt/project-files/reviews/launch-readiness-audit.md` (63 findi
 - F12 admin panel at `/admin`: organiser and event review queues, stuck refunds with retry, fraud flags (over 20 tickets per phone per event, failed-payment bursts, duplicate-scan spikes), featured events and per-event fee overrides at `/admin/events`, and a read-only audit log at `/admin/audit`.
 - Seed adds an organiser application and an event waiting for review so the admin queues are never empty in the demo.
 - F7 Telegram bot (`apps/bot`, grammY): `/start` links the chat by sharing your own phone number (only the sender's own contact counts), `/tonight` and `/weekend` event cards with poster, Addis date, venue, all-in "from" price and a Buy button that opens checkout as a Telegram Web App through a one-time 15-minute sign-in link (`/tg/login`), `/mytickets`, `/language` (saved on the account) and `/help`, all in Amharic by default or English. Paid tickets arrive in the chat as QR images (the wallet's static fallback code) with the event details, and ticket holders get reminders 24 hours and 3 hours before, once per person per event. Delivery runs through an idempotent outbox with retries, sent right after payment and from `/api/cron/telegram`. Settings has a "Connect Telegram" row. Without a bot token nothing changes.
+
+## Launch hardening 2: moderation and content screening (F22)
+
+- New `packages/moderation`: text screening with English, Amharic and Afaan Oromo lists (threats, scams, spam links, child-safety terms), resistant to case, zero-width characters, look-alike digits, stretched letters and interchangeable Ethiopic letters. The built-in lists are a starter set; the vetted slur and hate lists are loaded from `MODERATION_TERMS_FILE`, maintained by trust and safety.
+- Images and video go through a pluggable classifier interface. With no classifier configured, uploads outside demo mode wait for a moderator instead of going public.
+- Posts, comments, profiles, marketplace chat and booking requests are screened. Flagged posts and comments wait hidden in the moderator queue; child sexual content is removed at once. Threats, hate and scams aren't delivered in chat.
+- Report button on posts, comments, profiles, chat messages and reviews, with new "threat" and "child sexual content" reasons and optional details. One report per person per item; a child-safety report hides the item straight away.
+- Moderator queue at `/admin/moderation`, sorted by severity, then report count, then age, with 1-hour (urgent) and 24-hour due times. Actions: remove, 18+ only, warn, suspend, ban, dismiss. Each is recorded, audit-logged, closes the reports and notifies the person as ድንኳን (moderators stay anonymous).
+- Strikes: 3 in 90 days suspend for 7 days; severe violations (and any child-safety removal) ban at once and end every session. Suspended accounts can't post, comment, message or follow; banned accounts can't sign in and their content disappears.
+- Appeals at `/appeals/[id]`: once per decision, decided at `/admin/moderation/appeals` by a different moderator. Reversing restores the content, revokes the strike and lifts the suspension or ban.
+- Copyright reports: removal notifies the uploader as a takedown.
+- Community guidelines page (`/guidelines`, am/en), accepted at sign-up and logged as a consent.
+- Media is only served for public content: files on screened, restricted or removed posts go only to the uploader and moderators, trade licences only to their owner and admins, and cache lifetimes dropped from one year to five minutes.
+- Seed adds a second moderator (0911000008) for appeals and a couple of demo queue items.
+
+Still open from F22: age checks for nightlife content and gifting and teen accounts (AC8), and a real image/video classifier and vetted keyword lists, which need a provider and trust-and-safety input.

@@ -46,6 +46,6 @@ Then Actions → **Demo database** → Run workflow. It creates the tables and t
 4. Deploy, then make sure the web project's `SCANNER_ORIGIN` matches this URL and redeploy the web project if you changed it.
 
 ## Demo logins
-Code **123456** for buyer `0911000001`, gate staff `0911000002` and organiser `0911000003`. The admin account `0911000004` uses your `DEMO_STAFF_CODE`, so people you share the link with can't open the admin panel. Tell visitors not to type real phone numbers into the demo.
+Code **123456** for buyer `0911000001`, gate staff `0911000002` and organiser `0911000003`. The admin accounts `0911000004` and `0911000008` use your `DEMO_STAFF_CODE`, so people you share the link with can't open the admin panel. Tell visitors not to type real phone numbers into the demo.
 
 The live (non-demo) site must set `APP_ENV=production`; with that set, `DEMO_MODE=true` stops the app from serving anything, so a demo switch can never leak into production.

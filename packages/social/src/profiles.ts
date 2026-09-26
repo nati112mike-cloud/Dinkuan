@@ -1,6 +1,7 @@
 import { randomBytes } from "node:crypto";
 import { DomainError } from "@dinkuan/core";
 import { prisma, type Prisma, type Profile } from "@dinkuan/db";
+import { assertActive, screenText } from "@dinkuan/moderation";
 import { z } from "zod";
 import { BIO_MAX, INTERESTS, normalizeUsername, usernameBase } from "./text";
 import { visibleUsersWhere } from "./visibility";
@@ -64,6 +65,10 @@ export const profileInput = z.object({
 export async function updateProfile(userId: string, raw: z.input<typeof profileInput>): Promise<Profile> {
   const input = profileInput.parse(raw);
   const current = await ensureProfile(userId);
+  await assertActive(userId);
+  // F22-AC2: names, bios and links are public, so they are screened before they are saved.
+  const shown = [input.displayName, input.bio, input.link, input.username].filter(Boolean).join("\n");
+  if (shown && screenText(shown).status !== "public") throw new DomainError("CONTENT_FLAGGED");
   const data: Prisma.ProfileUpdateInput = { ...input, username: undefined };
   if (input.username !== undefined) {
     const u = normalizeUsername(input.username);

@@ -25,6 +25,9 @@ export default async function AdminPage() {
         <Link href="/admin/events" className="tap flex items-center rounded-xl bg-white px-3 ring-1 ring-tent-200">
           {t("admin.events")}
         </Link>
+        <Link href="/admin/moderation" className="tap flex items-center rounded-xl bg-white px-3 ring-1 ring-tent-200">
+          {t("admin.moderation")}
+        </Link>
         <Link href="/admin/ads" className="tap flex items-center rounded-xl bg-white px-3 ring-1 ring-tent-200">
           {t("adReview.title")}
         </Link>

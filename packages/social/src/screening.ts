@@ -1,24 +1,24 @@
-import { prisma, type ContentStatus, type Prisma } from "@dinkuan/db";
+import { prisma, type Prisma } from "@dinkuan/db";
+import { flagContent, hasMediaScreener, screenMedia, screenText, worstOf, type ScreeningResult } from "@dinkuan/moderation";
+
+export { screenText, type ScreeningResult } from "@dinkuan/moderation";
 
 /**
- * CLAUDE.md rule 14 / F22-AC2: nothing goes public before screening.
- * Demo stand-in: images and video are auto-approved and captions are checked against a short
- * spam list. The real screening provider (images, video, Amharic/Afaan Oromo/English text) plugs
- * in here and can send borderline posts to the moderator queue as `restricted`.
+ * CLAUDE.md rule 14 / F22-AC2: a post moves processing → screening → public | restricted | removed.
+ * Captions go through the keyword screener and media through the image/video screener. Anything
+ * that isn't clean joins the moderator queue.
  */
-const SPAM_PATTERNS = [/\bbit\.ly\//i, /\btinyurl\.com\//i, /\bfree\s+money\b/i, /\bcrypto\s+giveaway\b/i];
-
-export type ScreeningResult = { status: Extract<ContentStatus, "public" | "restricted">; reason?: string };
-
-export function screenText(text: string): ScreeningResult {
-  const hit = SPAM_PATTERNS.find((p) => p.test(text));
-  return hit ? { status: "restricted", reason: "spam_link" } : { status: "public" };
-}
-
-/** Moves a post processing → screening → public | restricted. */
 export async function screenPost(tx: Prisma.TransactionClient | typeof prisma, postId: string, caption: string) {
-  await tx.post.update({ where: { id: postId }, data: { status: "screening" } });
-  const result = screenText(caption);
+  const post = await tx.post.update({ where: { id: postId }, data: { status: "screening" }, include: { media: true } });
+  const blobIds = post.media.flatMap((m) => [m.url, m.thumbUrl]).map((u) => u?.match(/^\/api\/media\/([\w-]+)$/)?.[1]).filter((x): x is string => !!x);
+  const blobs = blobIds.length
+    ? await tx.mediaBlob.findMany({ where: { id: { in: blobIds } }, select: { contentType: true, bytes: hasMediaScreener() } })
+    : [];
+  const media = blobs.map((b) => ({ contentType: b.contentType, bytes: b.bytes ?? new Uint8Array() }));
+  const result = worstOf(screenText(caption), await screenMedia(media));
   await tx.post.update({ where: { id: postId }, data: { status: result.status } });
-  return result;
+  if (result.status !== "public" && result.category) {
+    await flagContent(tx, { targetType: "post", targetId: postId, subjectId: post.authorId, category: result.category, severity: result.severity });
+  }
+  return result as ScreeningResult;
 }

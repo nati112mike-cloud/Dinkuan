@@ -23,6 +23,7 @@ export async function login(page: Page, phone: string, next: string, name?: stri
   await page.getByRole("button", { name: "Log in" }).click();
   if (name) {
     await page.getByLabel(/Your name/).fill(name);
+    await page.getByLabel(/community guidelines/).check();
     await page.getByRole("button", { name: "Continue" }).click();
   }
   await page.waitForURL((u) => !u.pathname.startsWith("/login"));

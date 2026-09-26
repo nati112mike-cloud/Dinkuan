@@ -6,7 +6,7 @@ import { visibleUsersWhere } from "@dinkuan/social";
  * with bookings in Phase 2; the demo seeds reviews so pro profiles look real.
  */
 export async function vendorReviews(vendorId: string, viewerId: string | null, take = 20) {
-  const where = { vendorId, client: visibleUsersWhere(viewerId) };
+  const where = { vendorId, removedAt: null, client: visibleUsersWhere(viewerId) };
   const [items, avg] = await Promise.all([
     prisma.review.findMany({
       where,
@@ -15,7 +15,7 @@ export async function vendorReviews(vendorId: string, viewerId: string | null, t
       include: { client: { select: { profile: true } } },
     }),
     prisma.review.aggregate({
-      where: { vendorId },
+      where: { vendorId, removedAt: null },
       _avg: { punctuality: true, quality: true, value: true, communication: true },
     }),
   ]);

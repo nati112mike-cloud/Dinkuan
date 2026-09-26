@@ -1,5 +1,6 @@
 import { DomainError } from "@dinkuan/core";
 import { prisma, type Prisma } from "@dinkuan/db";
+import { assertActive } from "@dinkuan/moderation";
 import { z } from "zod";
 import { assertUnderLimit } from "./limits";
 import { notify } from "./notifications";
@@ -64,6 +65,7 @@ export async function syncTags(tx: Prisma.TransactionClient, postId: string, aut
 export async function createPost(authorId: string, raw: PostInput) {
   const input = postInput.parse(raw);
   await ensureProfile(authorId);
+  await assertActive(authorId);
   await assertUnderLimit("posts", authorId);
   const caption = input.caption.trim();
 
@@ -132,6 +134,7 @@ export async function editCaption(authorId: string, postId: string, caption: str
   const post = await prisma.post.findUnique({ where: { id: postId } });
   if (!post || post.status === "removed") throw new DomainError("NOT_FOUND");
   if (post.authorId !== authorId) throw new DomainError("FORBIDDEN");
+  await assertActive(authorId, now);
   if (now.getTime() - post.createdAt.getTime() > EDIT_WINDOW_MS) throw new DomainError("EDIT_WINDOW_CLOSED");
   const text = caption.trim().slice(0, CAPTION_MAX);
   if (post.type === "text" && !text) throw new DomainError("VALIDATION");

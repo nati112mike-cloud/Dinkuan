@@ -1,6 +1,7 @@
 import { DomainError } from "@dinkuan/core";
 import { recordAdConversion } from "@dinkuan/core/server";
 import { prisma, type Prisma } from "@dinkuan/db";
+import { assertActive, screenText } from "@dinkuan/moderation";
 import { ensureProfile, isBlockedEitherWay, notify } from "@dinkuan/social";
 import { z } from "zod";
 import { addisToday, isoDate, isAvailable, toDate } from "./availability";
@@ -38,6 +39,8 @@ export async function createRequest(
   const vendor = await prisma.vendorProfile.findUnique({ where: { userId: input.vendorId } });
   if (!vendor) throw new DomainError("NOT_FOUND");
   if (await isBlockedEitherWay(clientId, input.vendorId)) throw new DomainError("BLOCKED");
+  await assertActive(clientId, now);
+  if (screenText(`${input.notes ?? ""}\n${input.venue ?? ""}`).severity >= 2) throw new DomainError("CONTENT_FLAGGED");
   if (input.eventDate < addisToday(now)) throw new DomainError("VALIDATION", "Pick a future date");
   if (!(await isAvailable(input.vendorId, input.eventDate))) throw new DomainError("DATE_UNAVAILABLE");
   if (input.packageId) {
@@ -139,7 +142,9 @@ export async function listConversations(userId: string) {
 }
 
 /** The masked text, unless contact details were unlocked by a paid deposit (rule 16). */
-function visibleBody(m: { body: string; originalBody: string }, unlocked: boolean) {
+/** Masked until a deposit unlocks contact details (rule 16); empty once a moderator removes it (F22). */
+function visibleBody(m: { body: string; originalBody: string; removedAt: Date | null }, unlocked: boolean) {
+  if (m.removedAt) return "";
   return unlocked ? m.originalBody : m.body;
 }
 
@@ -172,7 +177,8 @@ export async function getConversation(userId: string, conversationId: string, no
     messages: messages.map((m) => ({
       id: m.id,
       body: visibleBody(m, c.contactUnlocked),
-      masked: m.masked && !c.contactUnlocked,
+      masked: m.masked && !c.contactUnlocked && !m.removedAt,
+      removed: !!m.removedAt,
       mine: m.senderId === userId,
       createdAt: m.createdAt,
     })),
@@ -189,6 +195,10 @@ export async function sendMessage(userId: string, conversationId: string, text: 
   const c = await participantConversation(userId, conversationId);
   const otherId = c.clientId === userId ? c.vendorId : c.clientId;
   if (await isBlockedEitherWay(userId, otherId)) throw new DomainError("BLOCKED");
+  await assertActive(userId, now);
+  // F22-AC2: threats, hate, scams and sexual content aren't delivered. Contact details and
+  // links are handled by masking instead (rule 16), so plain spam-link hits still go through.
+  if (screenText(body).severity >= 2) throw new DomainError("CONTENT_FLAGGED");
   const since = new Date(now.getTime() - 3600_000);
   if ((await prisma.message.count({ where: { senderId: userId, createdAt: { gte: since } } })) >= MARKET_LIMITS.messages) {
     throw new DomainError("RATE_LIMITED");
@@ -222,7 +232,7 @@ export async function sendMessage(userId: string, conversationId: string, text: 
     if (!otherReadAt || otherReadAt >= c.lastMessageAt) {
       await notify(tx, { recipientId: otherId, actorId: userId, type: "message", href: `/inbox/${conversationId}` });
     }
-    return { id: message.id, body: message.body, masked: message.masked, mine: true, createdAt: message.createdAt };
+    return { id: message.id, body: message.body, masked: message.masked, removed: false, mine: true, createdAt: message.createdAt };
   });
 }
 

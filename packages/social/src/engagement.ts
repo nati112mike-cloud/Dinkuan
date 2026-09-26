@@ -1,5 +1,6 @@
 import { DomainError } from "@dinkuan/core";
 import { prisma, type Prisma, type ReactionType, type ShareType } from "@dinkuan/db";
+import { assertActive, fileReport, flagContent, REPORT_REASONS, screenText, type ReportReason, type ReportTarget } from "@dinkuan/moderation";
 import { assertUnderLimit } from "./limits";
 import { notify } from "./notifications";
 import { refreshRank } from "./posts";
@@ -54,6 +55,7 @@ export async function addComment(userId: string, postId: string, body: string, p
   if (!text || text.length > COMMENT_MAX) throw new DomainError("VALIDATION");
   const post = await visiblePost(postId, userId);
   if (await isBlockedEitherWay(userId, post.authorId)) throw new DomainError("BLOCKED");
+  await assertActive(userId);
   await assertUnderLimit("comments", userId);
   let parent = null;
   if (parentId) {
@@ -63,11 +65,22 @@ export async function addComment(userId: string, postId: string, body: string, p
     if (parent.parentId) parent = await prisma.comment.findUniqueOrThrow({ where: { id: parent.parentId } });
   }
   const owner = await prisma.profile.findUnique({ where: { userId: post.authorId } });
-  const hidden = userId !== post.authorId && matchesHiddenWord(text, owner?.hiddenWords ?? []);
+  // F22-AC2: comments are screened too; flagged ones wait hidden in the moderator queue.
+  const screened = screenText(text);
+  const hidden = screened.status !== "public" || (userId !== post.authorId && matchesHiddenWord(text, owner?.hiddenWords ?? []));
   return prisma.$transaction(async (tx) => {
     const comment = await tx.comment.create({
-      data: { postId, authorId: userId, parentId: parent?.id ?? null, body: text, status: hidden ? "hidden" : "visible" },
+      data: {
+        postId,
+        authorId: userId,
+        parentId: parent?.id ?? null,
+        body: text,
+        status: screened.status === "removed" ? "removed" : hidden ? "hidden" : "visible",
+      },
     });
+    if (screened.category) {
+      await flagContent(tx, { targetType: "comment", targetId: comment.id, subjectId: userId, category: screened.category, severity: screened.severity });
+    }
     if (!hidden) {
       await tx.post.update({ where: { id: postId }, data: { commentCount: { increment: 1 } } });
       await refreshRank(tx, postId);
@@ -177,6 +190,8 @@ export async function deleteComment(userId: string, commentId: string) {
 
 export async function sharePost(userId: string, postId: string, type: ShareType, comment?: string) {
   await visiblePost(postId, userId);
+  await assertActive(userId);
+  if (comment && screenText(comment).status !== "public") throw new DomainError("CONTENT_FLAGGED");
   return prisma.$transaction(async (tx) => {
     const share = await tx.share.create({ data: { postId, userId, type, comment: comment?.trim().slice(0, 500) || null } });
     await tx.post.update({ where: { id: postId }, data: { shareCount: { increment: 1 } } });
@@ -226,15 +241,13 @@ export async function recordView(postId: string, viewerId: string | null, watche
 }
 
 // ---------------------------------------------------------------------------
-// F22-AC3 reports.
+// F22-AC3 reports: the moderation package owns reasons, targets and the queue.
 
-export const REPORT_REASONS = ["spam", "nudity", "violence", "hate", "harassment", "scam", "copyright", "other"] as const;
+export { REPORT_REASONS };
 
 export async function report(
   reporterId: string,
-  input: { targetType: "post" | "comment" | "profile"; targetId: string; reason: (typeof REPORT_REASONS)[number]; details?: string },
+  input: { targetType: ReportTarget; targetId: string; reason: ReportReason; details?: string },
 ) {
-  return prisma.report.create({
-    data: { reporterId, targetType: input.targetType, targetId: input.targetId, reason: input.reason, details: input.details?.slice(0, 1000) },
-  });
+  return fileReport(reporterId, input);
 }

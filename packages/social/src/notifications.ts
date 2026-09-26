@@ -5,10 +5,10 @@ type Db = Prisma.TransactionClient | typeof prisma;
 
 export async function notify(
   db: Db,
-  n: { recipientId: string; actorId: string; type: NotificationType; postId?: string | null },
+  n: { recipientId: string; actorId: string; type: NotificationType; postId?: string | null; href?: string | null },
 ) {
   if (n.recipientId === n.actorId) return;
-  await db.notification.create({ data: { ...n, postId: n.postId ?? null } });
+  await db.notification.create({ data: { ...n, postId: n.postId ?? null, href: n.href ?? null } });
 }
 
 export async function listNotifications(userId: string, limit = 50) {

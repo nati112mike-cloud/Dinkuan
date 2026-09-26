@@ -4,6 +4,8 @@ import { orderTotals } from "../fees";
 import { appUrl } from "./config";
 import { randomToken } from "./crypto";
 import { gatewayFor } from "./gateways";
+import { appendLedger, recordAdConversion } from "./ledger";
+import { failCampaignPayment, markCampaignPaid } from "./promotions";
 import { ensureEventSigningKey } from "./signing-keys";
 
 export const RESERVATION_MS = 10 * 60 * 1000; // F5-AC3
@@ -78,6 +80,8 @@ export async function startCheckout(input: {
   eventId: string;
   items: CheckoutItem[];
   gateway: Gateway;
+  /** F21-AC7: the promotion the buyer clicked (from the ad-click cookie), for attribution. */
+  campaignId?: string | null;
   now?: Date;
 }): Promise<{ order: Order; checkoutUrl: string | null }> {
   const now = input.now ?? new Date();
@@ -137,6 +141,7 @@ export async function startCheckout(input: {
         feeSantim: totals.fee,
         totalSantim: totals.total,
         expiresAt: new Date(now.getTime() + RESERVATION_MS),
+        campaignId: await liveCampaignId(tx, input.campaignId),
         items: {
           create: lines.map((l) => ({ ticketTypeId: l.ticketTypeId, qty: l.qty, unitPriceSantim: l.unitPrice })),
         },
@@ -159,28 +164,6 @@ export async function startCheckout(input: {
   return { order, checkoutUrl };
 }
 
-async function appendLedger(
-  tx: Tx,
-  e: { organiserId: string | null; orderId: string; type: "sale" | "fee" | "refund"; amount: number; ref: string },
-) {
-  // Serialise per organiser (or the platform) so balance_after is a true running balance.
-  const key = e.organiserId ?? "platform";
-  await tx.$executeRaw`SELECT pg_advisory_xact_lock(hashtext(${"ledger:" + key}))`;
-  const last = await tx.ledgerEntry.findFirst({
-    where: { organiserId: e.organiserId },
-    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
-  });
-  await tx.ledgerEntry.create({
-    data: {
-      organiserId: e.organiserId,
-      orderId: e.orderId,
-      type: e.type,
-      amountSantim: e.amount,
-      balanceAfterSantim: (last?.balanceAfterSantim ?? 0) + e.amount,
-      ref: e.ref,
-    },
-  });
-}
 
 export type MarkPaidResult = "paid" | "already_paid" | "refunded_sold_out" | "ignored";
 
@@ -259,6 +242,7 @@ export async function markOrderPaid(
       // The platform fee is never mixed into organiser revenue (F11-AC3).
       await appendLedger(tx, { organiserId: null, orderId, type: "fee", amount: order.feeSantim, ref: order.gatewayRef });
     }
+    if (order.campaignId) await recordAdConversion(tx, order.campaignId, "ticket_sale", orderId);
     return "paid";
   });
 
@@ -313,7 +297,18 @@ export async function handlePaymentWebhook(
     throw e;
   }
   const order = await prisma.order.findUnique({ where: { gatewayRef: parsed.ref } });
+  const campaign = order ? null : await prisma.campaign.findUnique({ where: { gatewayRef: parsed.ref } });
   let result: MarkPaidResult | undefined;
+  if (campaign) {
+    if (parsed.status === "paid") {
+      const check = await adapter.verify(parsed.ref);
+      if (check.status === "paid" && check.amountSantim === campaign.budgetSantim) {
+        await markCampaignPaid(campaign.id, { source: "webhook" });
+      }
+    } else if (parsed.status === "failed") {
+      await failCampaignPayment(campaign.id);
+    }
+  }
   if (order) {
     if (parsed.status === "paid") {
       const check = await adapter.verify(parsed.ref);
@@ -328,7 +323,7 @@ export async function handlePaymentWebhook(
     where: { gateway_gatewayRef_type: { gateway, gatewayRef: parsed.ref, type: parsed.type } },
     data: { processed: true },
   });
-  return { status: order ? "processed" : "ignored", result };
+  return { status: order || campaign ? "processed" : "ignored", result };
 }
 
 async function failOrder(orderId: string) {
@@ -363,4 +358,11 @@ export async function reconcilePendingOrders(now = new Date()) {
   for (const { id } of pending) await verifyOrderWithGateway(id).catch(() => undefined);
   const expired = await expireStaleOrders(now);
   return { checked: pending.length, expired };
+}
+
+/** Only a campaign that exists and has been live can be credited with a sale. */
+async function liveCampaignId(tx: Tx, id: string | null | undefined): Promise<string | null> {
+  if (!id || !/^[0-9a-f-]{36}$/i.test(id)) return null;
+  const c = await tx.campaign.findUnique({ where: { id }, select: { id: true, startsAt: true } });
+  return c?.startsAt ? c.id : null;
 }

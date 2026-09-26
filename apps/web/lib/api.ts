@@ -18,6 +18,9 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   BLOCKED: 403,
   RATE_LIMITED: 429,
   UPLOAD_TOO_LARGE: 413,
+  DATE_UNAVAILABLE: 409,
+  CAMPAIGN_STATE: 409,
+  REFUND_FAILED: 502,
 };
 
 export function fail(code: ErrorCode, message?: string) {

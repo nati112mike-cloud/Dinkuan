@@ -9,7 +9,7 @@ import { formatBirr } from "@dinkuan/core";
  */
 export function DemoPayForm(props: {
   refId: string;
-  orderId: string;
+  returnUrl: string;
   gateway: "telebirr" | "chapa";
   amountSantim: number;
   description: string;
@@ -27,7 +27,7 @@ export function DemoPayForm(props: {
       body: JSON.stringify({ action }),
     });
     // Like a real gateway, send the buyer back to the merchant's return URL.
-    window.location.href = `/orders/${props.orderId}`;
+    window.location.href = props.returnUrl;
   }
 
   return (

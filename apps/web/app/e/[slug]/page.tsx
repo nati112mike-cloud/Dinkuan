@@ -42,6 +42,10 @@ export default async function EventPage({ params }: { params: Params }) {
   const saved = user
     ? !!(await prisma.savedEvent.findUnique({ where: { userId_eventId: { userId: user.id, eventId: event.id } } }))
     : false;
+  const canPromote =
+    !!user &&
+    (event.organiser.ownerUserId === user.id ||
+      !!(await prisma.organiserMember.findFirst({ where: { organiserId: event.organiserId, userId: user.id, role: "manager" } })));
   const cfg = { feePctBps: event.feePctBps, feeFixedSantim: event.feeFixedSantim };
   const now = new Date();
   const ended = event.status === "ended" || (event.endsAt ?? event.startsAt) < now;
@@ -95,6 +99,11 @@ export default async function EventPage({ params }: { params: Params }) {
         <div className="flex gap-2 pt-1">
           <ShareButton lang={lang} title={title} />
           <SaveButton lang={lang} eventId={event.id} initial={saved} loggedIn={!!user} />
+          {canPromote && event.status === "published" && !ended && (
+            <Link href={`/promote?type=event&id=${event.id}`} className="tap grid place-items-center rounded-full bg-tent-700 px-4 text-sm font-bold text-white">
+              📣 {t("promote.cta")}
+            </Link>
+          )}
         </div>
       </header>
 

@@ -25,3 +25,7 @@ export async function getT() {
   const lang = await currentLang();
   return { lang, t: translator(lang) };
 }
+
+export function isAdmin(user: { roles: { role: string }[] } | null | undefined) {
+  return !!user?.roles.some((r) => r.role === "admin");
+}

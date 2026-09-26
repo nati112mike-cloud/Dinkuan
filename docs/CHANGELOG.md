@@ -29,3 +29,16 @@ Not yet built: organiser dashboard and event creation (F2, F3, F11), Telegram bo
 - Seed: 16 fictional Addis creators, 24 posts, 8 placeholder reels and event Moments.
 
 Demo shortcuts, to replace before launch: uploads are stored in Postgres (swap for object storage), videos are not transcoded (the seeded reels have a 240p copy for low-data mode), screening is a stub, and counters are updated in the same transaction rather than by a background job (rule 18). Contact sync (F17-AC2) and the invite reward are not built yet.
+
+## Demo milestone 3: marketplace and promotion
+
+- New main nav per PRD 6: Home · Reels · Create · Events · Hire. My tickets moved to the top of Events and to your profile; a 💬 inbox with an unread badge joined the header.
+- F20 marketplace (Phase 1): pro profiles on top of social profiles (types, headline, experience, services, genres, languages, areas, equipment, team, links), levels (New, Rising, Top rated, Pro), portfolio albums tagged to ድንኳን events and confirmed by the organiser as verified gigs, stage credits, Basic/Standard/Premium packages with add-ons, an availability calendar, and a vendor dashboard.
+- Hire search by type, date (only free vendors), price, rating, level, area, genre and language, with Recommended, Top rated, Lowest price and Most booked sorts; compare up to 3; shortlists shareable on Telegram.
+- Booking requests (date, time, venue, event type, guests, package, budget, notes) open a chat. Phone numbers, links, emails and @handles are masked in requests and chat until a deposit is paid (rule 16), including Ethiopic and Arabic digits and numbers spelled out in English or Amharic. Response time and reply rate are tracked.
+- Reviews are shown read-only from the seed; writing reviews, offers and deposits come in Phase 2.
+- F21 promotion (Phase 1): Starter Boost, Event Spotlight, Weekend Takeover and Vendor Top Search, bought through the gateway with an estimated reach; Push Blast shows as coming soon. Paid promotions wait in an admin ad review queue (with an automatic content check), then run labelled "Sponsored · ማስታወቂያ" in the feed, reels, Featured events, Home "This weekend" and the top of Hire search. Each person sees a promotion at most 3 times a day, impression packages are paced evenly, and results show views, reach, clicks, click rate, ticket sales and booking requests (a click is remembered for 7 days). Rejected promotions are refunded in full and stopped ones refund the unspent share, through the gateway, with ledger rows and audit logs.
+- Seed: 12 fictional pros (8 from the social seed, 4 new), packages, albums, stage credits, blocked dates and reviews, plus the promotion packages and 3 live demo promotions.
+- E2E: `marketplace.spec` (find a free DJ, compare 3, request, chat with contacts masked) and `promotion.spec` (buy Event Spotlight, admin approves, labelled, a ticket sale counts, stop refunds). `E2E_WIDTH=360` runs them at the smallest phone width.
+
+Demo shortcuts: Weekend Takeover's reels boost and Telegram channel post wait for the bot (M4), and vendor stats for the seeded pros stand in for bookings made before ድንኳን.

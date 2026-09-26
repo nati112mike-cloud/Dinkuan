@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { prisma } from "@dinkuan/db";
 import type { MessageKey } from "@dinkuan/i18n";
 import { getProfileView, profileEvents, profilePosts } from "@dinkuan/social";
 import { Avatar } from "@/components/Avatar";
@@ -10,7 +11,7 @@ import { PostGrid } from "@/components/PostGrid";
 import { ProfileMenu } from "@/components/ProfileMenu";
 import { eventTitle, formatDay } from "@/lib/format";
 import { compactNumber } from "@/lib/client";
-import { currentUser, getT } from "@/lib/session";
+import { currentUser, getT, isAdmin } from "@/lib/session";
 import { toPostDTO } from "@/lib/social";
 
 export const dynamic = "force-dynamic";
@@ -39,6 +40,7 @@ export default async function ProfilePage({ params, searchParams }: { params: Pa
   const view = await getProfileView(username, viewer);
   if (!view) notFound();
   const { profile, rel, canSeePosts, badges } = view;
+  const isVendor = !!(await prisma.vendorProfile.findUnique({ where: { userId: profile.userId }, select: { userId: true } }));
   const { lang, t } = await getT();
 
   let content: React.ReactNode = null;
@@ -153,10 +155,32 @@ export default async function ProfilePage({ params, searchParams }: { params: Pa
         {stat(profile.followingCount, "profile.followingCount", `/u/${profile.username}/following`)}
         {stat(profile.likesReceived, "profile.likes")}
       </div>
-      {rel.isSelf && (
-        <Link href="/profile" className="block text-center text-sm font-semibold text-tent-600">
-          {t("profile.account")} →
-        </Link>
+      {rel.isSelf ? (
+        <div className="flex flex-wrap justify-center gap-2 text-sm font-semibold">
+          <Link href="/tickets" className="tap grid place-items-center rounded-full bg-white px-4 ring-1 ring-tent-200">
+            🎫 {t("nav.tickets")}
+          </Link>
+          <Link href="/vendor" className="tap grid place-items-center rounded-full bg-white px-4 ring-1 ring-tent-200">
+            🎧 {t(isVendor ? "vendor.dash.title" : "vendor.become")}
+          </Link>
+          <Link href="/promote" className="tap grid place-items-center rounded-full bg-white px-4 ring-1 ring-tent-200">
+            📣 {t("promote.cta")}
+          </Link>
+          {isAdmin(user) && (
+            <Link href="/admin/ads" className="tap grid place-items-center rounded-full bg-white px-4 ring-1 ring-tent-200">
+              🛡 {t("adReview.title")}
+            </Link>
+          )}
+          <Link href="/profile" className="tap grid place-items-center rounded-full px-4 text-tent-600">
+            {t("profile.account")} →
+          </Link>
+        </div>
+      ) : (
+        isVendor && (
+          <Link href={`/hire/v/${profile.username}`} className="tap grid place-items-center rounded-2xl bg-tent-700 px-4 font-bold text-white">
+            🎧 {t("vendor.viewPro")}
+          </Link>
+        )
       )}
 
       <nav className="flex border-b border-tent-100" aria-label="Profile">

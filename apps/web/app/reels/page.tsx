@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { reelsFeed } from "@dinkuan/social";
 import { ReelsPlayer } from "@/components/ReelsPlayer";
+import { withSponsoredPosts } from "@/lib/ads";
 import { getT } from "@/lib/session";
 import { currentMember, toPostDTO } from "@/lib/social";
 
@@ -15,7 +16,14 @@ export default async function ReelsPage({ searchParams }: { searchParams: Promis
   const page = await reelsFeed(viewer, null, 6, start);
   return (
     <ReelsPlayer
-      initial={{ items: page.items.map((p) => toPostDTO(p, viewer, lang)), nextCursor: page.nextCursor }}
+      initial={{
+        items: await withSponsoredPosts(
+          page.items.map((p) => toPostDTO(p, viewer, lang)),
+          "reels",
+          { viewerId: viewer, lang, firstPage: true },
+        ),
+        nextCursor: page.nextCursor,
+      }}
       lang={lang}
       loggedIn={!!me}
       lowData={me?.profile.lowDataMode ?? false}

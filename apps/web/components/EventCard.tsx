@@ -1,15 +1,29 @@
 import Link from "next/link";
+import { adClickHref } from "@dinkuan/ads/text";
 import { translator, type Lang } from "@dinkuan/i18n";
 import { isSoldOut, minAllIn, type EventCard as EventCardData } from "@/lib/events";
 import { birr, eventTitle, formatDay, formatTime } from "@/lib/format";
+import type { SponsoredDTO } from "@/lib/social-types";
+import { AdView, SponsoredLabel } from "./Sponsored";
 
-export function EventCard({ event, lang, wide = false }: { event: EventCardData; lang: Lang; wide?: boolean }) {
+export function EventCard({
+  event,
+  lang,
+  wide = false,
+  sponsored,
+}: {
+  event: EventCardData;
+  lang: Lang;
+  wide?: boolean;
+  sponsored?: SponsoredDTO;
+}) {
   const t = translator(lang);
   const price = minAllIn(event);
   const soldOut = isSoldOut(event);
-  return (
+  const card = (
     <Link
-      href={`/e/${event.slug}`}
+      href={sponsored ? adClickHref(sponsored.campaignId, sponsored.placement) : `/e/${event.slug}`}
+      prefetch={sponsored ? false : undefined}
       className={`group block overflow-hidden rounded-2xl bg-white shadow-sm ring-1 ring-tent-100 ${wide ? "w-72 shrink-0" : ""}`}
     >
       <div className="relative aspect-[4/5] w-full overflow-hidden bg-tent-100">
@@ -24,6 +38,7 @@ export function EventCard({ event, lang, wide = false }: { event: EventCardData;
             {t("event.soldOut")}
           </span>
         )}
+        {sponsored && <SponsoredLabel className="absolute bottom-2 left-2" />}
       </div>
       <div className="space-y-1 p-3">
         <p className="text-xs font-semibold uppercase tracking-wide text-tent-600">
@@ -36,5 +51,12 @@ export function EventCard({ event, lang, wide = false }: { event: EventCardData;
         </p>
       </div>
     </Link>
+  );
+  return sponsored ? (
+    <AdView campaignId={sponsored.campaignId} placement={sponsored.placement} className={wide ? "shrink-0" : undefined}>
+      {card}
+    </AdView>
+  ) : (
+    card
   );
 }

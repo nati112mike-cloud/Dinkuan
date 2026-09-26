@@ -1,7 +1,10 @@
 import Link from "next/link";
+import { sponsoredEvents } from "@dinkuan/ads";
 import { followingFeed, forYouFeed } from "@dinkuan/social";
 import { EventsDiscovery } from "@/components/EventsDiscovery";
 import { Feed } from "@/components/Feed";
+import { SponsoredEvent } from "@/components/SponsoredEvent";
+import { viewerKey, withSponsoredPosts } from "@/lib/ads";
 import { currentUser, getT } from "@/lib/session";
 import { toPostDTO } from "@/lib/social";
 
@@ -37,23 +40,32 @@ export default async function Home({ searchParams }: { searchParams: Promise<{ t
     );
   } else {
     const page = tab === "following" ? await followingFeed(viewer!) : await forYouFeed(viewer);
-    const initial = { items: page.items.map((p) => toPostDTO(p, viewer, lang)), nextCursor: page.nextCursor };
+    const items = page.items.map((p) => toPostDTO(p, viewer, lang));
+    // F21: For You carries labelled promotions; the Following feed never does.
+    const initial = {
+      items: tab === "foryou" ? await withSponsoredPosts(items, "feed", { viewerId: viewer, lang, firstPage: true }) : items,
+      nextCursor: page.nextCursor,
+    };
+    const [spotlight] = tab === "foryou" ? await sponsoredEvents("feed", await viewerKey(viewer), 1) : [];
     body = (
-      <Feed
-        key={tab}
-        initial={initial}
-        endpoint={`/api/feed?tab=${tab}`}
-        lang={lang}
-        loggedIn={!!user}
-        empty={
-          <div className="space-y-3 py-8 text-center">
-            <p className="text-stone-600">{t("feed.empty")}</p>
-            <Link href="/people" className="tap inline-grid place-items-center rounded-full bg-tent-600 px-6 font-semibold text-white">
-              {t("feed.findPeople")}
-            </Link>
-          </div>
-        }
-      />
+      <>
+        {spotlight && <SponsoredEvent event={spotlight.event} campaignId={spotlight.campaignId} lang={lang} />}
+        <Feed
+          key={tab}
+          initial={initial}
+          endpoint={`/api/feed?tab=${tab}`}
+          lang={lang}
+          loggedIn={!!user}
+          empty={
+            <div className="space-y-3 py-8 text-center">
+              <p className="text-stone-600">{t("feed.empty")}</p>
+              <Link href="/people" className="tap inline-grid place-items-center rounded-full bg-tent-600 px-6 font-semibold text-white">
+                {t("feed.findPeople")}
+              </Link>
+            </div>
+          }
+        />
+      </>
     );
   }
 

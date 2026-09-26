@@ -15,7 +15,7 @@ Payment gateway and SMS contracts are still being signed, so the app runs in **d
 - Login codes are not sent by SMS; the code is always `123456`.
 - A banner on every page says payments are simulated.
 
-Demo accounts (code `123456`):
+Demo accounts (code `123456`; on a shared demo the admin uses `DEMO_STAFF_CODE` instead):
 
 | Phone | Role |
 |---|---|

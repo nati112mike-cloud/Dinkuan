@@ -3,6 +3,7 @@ import { prisma } from "@dinkuan/db";
 import { signDemoWebhook, DEMO_SIGNATURE_HEADER } from "@dinkuan/payments";
 import { z } from "zod";
 import { fail, handleError, ok, parseJson } from "@/lib/api";
+import { currentUser } from "@/lib/session";
 import { drainTelegramAfterResponse } from "@/lib/telegram";
 
 /**
@@ -15,6 +16,14 @@ export async function POST(req: Request, { params }: { params: Promise<{ ref: st
     if (!isDemoMode()) return fail("NOT_FOUND");
     const { ref } = await params;
     const { action } = await parseJson(req, z.object({ action: z.enum(["confirm", "cancel"]) }));
+    // Only the buyer (or advertiser) whose order this is can confirm or cancel it.
+    const user = await currentUser();
+    if (!user) return fail("UNAUTHENTICATED");
+    const [mine, myCampaign] = await Promise.all([
+      prisma.order.count({ where: { gatewayRef: ref, userId: user.id } }),
+      prisma.campaign.count({ where: { gatewayRef: ref, advertiserId: user.id } }),
+    ]);
+    if (!mine && !myCampaign) return fail("NOT_FOUND");
     const payment = await demoPaymentStore.get(ref);
     if (!payment || payment.status !== "pending") return fail("NOT_FOUND");
     await demoPaymentStore.setStatus(ref, action === "confirm" ? "paid" : "failed");

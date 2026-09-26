@@ -9,11 +9,13 @@ export function CheckoutForm({
   eventId,
   items,
   total,
+  accessCode,
 }: {
   lang: Lang;
   eventId: string;
   items: { ticketTypeId: string; qty: number }[];
   total: number;
+  accessCode?: string | null;
 }) {
   const t = translator(lang);
   const [gateway, setGateway] = useState<"telebirr" | "chapa">("telebirr");
@@ -27,7 +29,7 @@ export function CheckoutForm({
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId, items, gateway, sharePhone }),
+      body: JSON.stringify({ eventId, items, gateway, sharePhone, accessCode: accessCode ?? null }),
     });
     const json = await res.json();
     if (!res.ok) {

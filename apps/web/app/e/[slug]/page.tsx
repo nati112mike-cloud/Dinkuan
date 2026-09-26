@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { allInPrice, feePerTicket } from "@dinkuan/core";
+import { codeMatches } from "@dinkuan/core/server";
 import Link from "next/link";
 import { prisma } from "@dinkuan/db";
 import { eventMoments } from "@dinkuan/social";
@@ -33,8 +34,9 @@ export async function generateMetadata({ params }: { params: Params }): Promise<
   };
 }
 
-export default async function EventPage({ params }: { params: Params }) {
+export default async function EventPage({ params, searchParams }: { params: Params; searchParams: Promise<{ code?: string }> }) {
   const { slug } = await params;
+  const code = (await searchParams).code?.slice(0, 20) ?? null;
   const event = await getEventBySlug(slug);
   if (!event || event.status === "draft" || event.status === "pending_review") notFound();
   const { lang, t } = await getT();
@@ -50,7 +52,8 @@ export default async function EventPage({ params }: { params: Params }) {
   const now = new Date();
   const ended = event.status === "ended" || (event.endsAt ?? event.startsAt) < now;
   const types = event.ticketTypes
-    .filter((tt) => tt.visibility === "public")
+    // F3-AC3: hidden types show only with their code (?code=… on the event link).
+    .filter((tt) => tt.visibility === "public" || codeMatches(tt.accessCode, code))
     .map((tt) => {
       const left = tt.capacity - tt.sold - tt.reserved;
       const closed = (tt.salesStart && tt.salesStart > now) || (tt.salesEnd && tt.salesEnd < now);
@@ -132,7 +135,7 @@ export default async function EventPage({ params }: { params: Params }) {
         ) : ended ? (
           <p className="rounded-xl bg-stone-100 p-4 font-semibold text-stone-600">{t("event.ended")}</p>
         ) : (
-          <TicketSelector lang={lang} eventId={event.id} slug={event.slug} types={types} loggedIn={!!user} />
+          <TicketSelector lang={lang} eventId={event.id} slug={event.slug} types={types} loggedIn={!!user} code={code} />
         )}
         <p className="text-xs text-stone-500">{t("checkout.reserved")}</p>
       </section>

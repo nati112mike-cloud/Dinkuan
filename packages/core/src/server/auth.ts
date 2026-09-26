@@ -2,7 +2,7 @@ import { prisma, type User } from "@dinkuan/db";
 import { DomainError } from "../errors";
 import { normalizeEthiopianPhone } from "../phone";
 import { randomOtp, randomToken, sha256 } from "./crypto";
-import { DEMO_OTP, demoOtpEnabled, smsProvider } from "./sms";
+import { DEMO_OTP, demoOtpEnabled, demoStaffOtp, smsProvider } from "./sms";
 
 export const OTP_TTL_MS = 5 * 60 * 1000;
 export const OTP_MAX_ATTEMPTS = 5;
@@ -18,20 +18,26 @@ function hashOtp(phone: string, code: string) {
 export async function requestOtp(rawPhone: string, now = new Date()): Promise<{ phone: string }> {
   const phone = normalizeEthiopianPhone(rawPhone);
   if (!phone) throw new DomainError("INVALID_PHONE");
-  const code = demoOtpEnabled() ? DEMO_OTP : randomOtp();
+  const code = demoOtpEnabled() ? await demoCodeFor(phone) : randomOtp();
   const existing = await prisma.otpCode.findUnique({ where: { phone } });
   const windowOpen = existing && now.getTime() - existing.windowStart.getTime() < OTP_SEND_WINDOW_MS;
   if (windowOpen && existing.sendCount >= OTP_MAX_SENDS) throw new DomainError("OTP_RATE_LIMITED");
   const data = {
     codeHash: hashOtp(phone, code),
     expiresAt: new Date(now.getTime() + OTP_TTL_MS),
-    attempts: 0,
+    // A resend inside the window keeps the wrong-code count, so resending doesn't buy more guesses.
+    attempts: windowOpen ? existing.attempts : 0,
     sendCount: windowOpen ? existing.sendCount + 1 : 1,
     windowStart: windowOpen ? existing.windowStart : now,
   };
   await prisma.otpCode.upsert({ where: { phone }, create: { phone, ...data }, update: data });
   await smsProvider().send(phone, `Dinkuan code: ${code}`);
   return { phone };
+}
+
+async function demoCodeFor(phone: string) {
+  const admin = await prisma.userRole.findFirst({ where: { role: "admin", user: { phone } }, select: { userId: true } });
+  return admin ? demoStaffOtp() : DEMO_OTP;
 }
 
 /** F1-AC2/AC3: verify code (max 5 attempts), create the user if new, start a 30-day session. */
@@ -42,15 +48,20 @@ export async function verifyOtp(
 ): Promise<{ token: string; user: User; isNew: boolean }> {
   const phone = normalizeEthiopianPhone(rawPhone);
   if (!phone) throw new DomainError("INVALID_PHONE");
-  const otp = await prisma.otpCode.findUnique({ where: { phone } });
-  if (!otp) throw new DomainError("OTP_INVALID");
-  if (otp.attempts >= OTP_MAX_ATTEMPTS) throw new DomainError("OTP_TOO_MANY_ATTEMPTS");
-  if (otp.expiresAt < now) throw new DomainError("OTP_EXPIRED");
-  if (otp.codeHash !== hashOtp(phone, code.trim())) {
-    await prisma.otpCode.update({ where: { phone }, data: { attempts: { increment: 1 } } });
-    throw new DomainError("OTP_INVALID");
+  // Count the attempt first, in one statement, so parallel guesses can't all slip under the limit.
+  const [otp] = await prisma.$queryRaw<{ code_hash: string; expires_at: Date }[]>`
+    UPDATE otp_codes SET attempts = attempts + 1
+    WHERE phone = ${phone} AND attempts < ${OTP_MAX_ATTEMPTS}
+    RETURNING code_hash, expires_at`;
+  if (!otp) {
+    const exists = await prisma.otpCode.findUnique({ where: { phone }, select: { phone: true } });
+    throw new DomainError(exists ? "OTP_TOO_MANY_ATTEMPTS" : "OTP_INVALID");
   }
-  await prisma.otpCode.delete({ where: { phone } });
+  if (otp.expires_at < now) throw new DomainError("OTP_EXPIRED");
+  if (otp.code_hash !== hashOtp(phone, code.trim())) throw new DomainError("OTP_INVALID");
+  // Only one of two parallel correct guesses gets a session.
+  const used = await prisma.otpCode.deleteMany({ where: { phone, codeHash: otp.code_hash } });
+  if (used.count === 0) throw new DomainError("OTP_INVALID");
   const { user, isNew } = await findOrCreateUserByPhone(phone);
   const token = await createSession(user.id, now);
   return { token, user, isNew };

@@ -7,13 +7,13 @@ import { currentUser, getT } from "@/lib/session";
 
 export const dynamic = "force-dynamic";
 
-type SP = Promise<{ event?: string; items?: string }>;
+type SP = Promise<{ event?: string; items?: string; code?: string }>;
 
 /** F5-AC1: review (all-in price + fee breakdown) → choose method → pay. */
 export default async function CheckoutPage({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const user = await currentUser();
-  if (!user) redirect(`/login?next=${encodeURIComponent(`/checkout?event=${sp.event}&items=${sp.items}`)}`);
+  if (!user) redirect(`/login?next=${encodeURIComponent(`/checkout?event=${sp.event}&items=${sp.items}${sp.code ? `&code=${sp.code}` : ""}`)}`);
   const event = sp.event ? await getEventBySlug(sp.event) : null;
   if (!event) redirect("/");
   const { lang, t } = await getT();
@@ -68,6 +68,7 @@ export default async function CheckoutPage({ searchParams }: { searchParams: SP 
         lang={lang}
         eventId={event.id}
         items={lines.map((l) => ({ ticketTypeId: l.id, qty: l.qty }))}
+        accessCode={sp.code?.slice(0, 20) ?? null}
         total={totals.total}
       />
       <p className="text-center text-xs text-stone-500">{t("checkout.reserved")}</p>

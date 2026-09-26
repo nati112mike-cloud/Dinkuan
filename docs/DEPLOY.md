@@ -45,6 +45,11 @@ Then Actions → **Demo database** → Run workflow. It creates the tables and t
 3. Environment variable: `VITE_API_URL` = `https://<your-web-project>.vercel.app`.
 4. Deploy, then make sure the web project's `SCANNER_ORIGIN` matches this URL and redeploy the web project if you changed it.
 
+## 5. After it's live
+
+See [OPERATIONS.md](OPERATIONS.md) for the health check to monitor, error reports (`SENTRY_DSN`),
+and the nightly encrypted backup (`BACKUP_PASSPHRASE` repository secret).
+
 ## Demo logins
 Code **123456** for buyer `0911000001`, gate staff `0911000002` and organiser `0911000003`. The admin accounts `0911000004` and `0911000008` use your `DEMO_STAFF_CODE`, so people you share the link with can't open the admin panel. Tell visitors not to type real phone numbers into the demo.
 

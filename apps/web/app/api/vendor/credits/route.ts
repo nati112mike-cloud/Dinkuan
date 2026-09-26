@@ -11,6 +11,6 @@ export async function POST(req: Request) {
     const c = await addCredit(me.user.id, input);
     return ok({ id: c.id, name: c.name, verified: c.verified });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

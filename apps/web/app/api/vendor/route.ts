@@ -11,6 +11,6 @@ export async function PUT(req: Request) {
     const v = await saveVendorProfile(me.user.id, input);
     return ok({ userId: v.userId });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

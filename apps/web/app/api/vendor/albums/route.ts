@@ -11,6 +11,6 @@ export async function POST(req: Request) {
     const album = await createAlbum(me.user.id, input);
     return ok({ id: album.id });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

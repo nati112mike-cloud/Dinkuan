@@ -11,6 +11,6 @@ export async function DELETE(req: Request, { params }: { params: Promise<{ userI
     await removeTeamMember(user.id, organiserId, z.uuid().parse((await params).userId));
     return ok({ removed: true });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

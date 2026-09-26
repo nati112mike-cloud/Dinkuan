@@ -12,6 +12,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const lang = await currentLang();
     return ok({ items: page.items.map((p) => toPostDTO(p, viewer, lang)), nextCursor: page.nextCursor });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

@@ -15,6 +15,6 @@ export async function POST(req: Request) {
     await setBlockedDates(me.user.id, input);
     return ok({ saved: true });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

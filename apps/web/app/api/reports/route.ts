@@ -21,6 +21,6 @@ export async function POST(req: Request) {
     const r = await report(user.id, input);
     return ok({ id: r.id });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

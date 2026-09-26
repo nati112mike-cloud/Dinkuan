@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     const user = await currentUser();
     return ok(await listComments((await params).id, user?.id ?? null));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, _req);
   }
 }
 
@@ -23,6 +23,6 @@ export async function POST(req: Request, { params }: Ctx) {
     const input = await parseJson(req, z.object({ body: z.string().min(1).max(500), parentId: z.uuid().nullable().optional() }));
     return ok(await addComment(me.user.id, (await params).id, input.body, input.parentId));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

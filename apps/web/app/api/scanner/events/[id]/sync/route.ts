@@ -20,6 +20,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { checkIns } = await parseJson(req, schema);
     return withCors(req, ok({ results: await syncCheckIns(user, id, checkIns) }));
   } catch (e) {
-    return withCors(req, handleError(e));
+    return withCors(req, handleError(e, req));
   }
 }

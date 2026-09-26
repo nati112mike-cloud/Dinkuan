@@ -23,6 +23,6 @@ export async function GET(req: Request) {
       ),
     );
   } catch (e) {
-    return withCors(req, handleError(e));
+    return withCors(req, handleError(e, req));
   }
 }

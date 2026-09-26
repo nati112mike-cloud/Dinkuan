@@ -12,6 +12,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const saved = await saveTicketTypes(user.id, (await params).id, types);
     return ok({ count: saved.length });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

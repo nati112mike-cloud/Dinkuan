@@ -4,6 +4,7 @@ import { after, NextResponse } from "next/server";
 import { z } from "zod";
 import { fail } from "@/lib/api";
 import { getBot } from "@/lib/telegram";
+import { reportError } from "@dinkuan/core/server";
 
 type Update = Parameters<TelegramBot["handleUpdate"]>[0];
 
@@ -35,7 +36,7 @@ export async function POST(req: Request) {
     try {
       await (await bot).handleUpdate(parsed.data as unknown as Update);
     } catch (e) {
-      console.error("[telegram] update failed", e);
+      await reportError(e, { path: "/api/telegram/webhook" });
     }
   });
   return NextResponse.json({ data: { ok: true } });

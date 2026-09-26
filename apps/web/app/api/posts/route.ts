@@ -13,6 +13,6 @@ export async function POST(req: Request) {
     const view = await getPost(post.id, me.user.id);
     return ok(view ? toPostDTO(view, me.user.id, await currentLang()) : { id: post.id });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

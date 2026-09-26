@@ -1,6 +1,6 @@
 import "server-only";
 import { createBot, createTelegramSender, type TelegramBot } from "@dinkuan/bot";
-import { drainOutbox, enqueueEventReminders } from "@dinkuan/core/server";
+import { drainOutbox, enqueueEventReminders, reportError } from "@dinkuan/core/server";
 import { after } from "next/server";
 
 /** The bot is optional: without TELEGRAM_BOT_TOKEN everything else works and Telegram routes answer 404. */
@@ -50,7 +50,7 @@ export function drainTelegramAfterResponse() {
     try {
       await drainTelegramOutbox();
     } catch (e) {
-      console.error("[telegram] outbox drain failed", e);
+      await reportError(e, { path: "telegram outbox" });
     }
   });
 }

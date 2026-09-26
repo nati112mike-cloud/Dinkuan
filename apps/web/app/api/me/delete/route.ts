@@ -15,6 +15,6 @@ export async function POST(req: Request) {
     (await cookies()).delete(SESSION_COOKIE);
     return ok({ deleted: true });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

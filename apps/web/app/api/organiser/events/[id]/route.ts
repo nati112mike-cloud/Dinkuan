@@ -9,6 +9,6 @@ export async function PUT(req: Request, { params }: { params: Promise<{ id: stri
     const event = await updateEvent(user.id, (await params).id, await parseJson(req, eventInput));
     return ok({ id: event.id });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

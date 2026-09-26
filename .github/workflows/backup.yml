@@ -1,0 +1,51 @@
+name: Database backup
+
+# Nightly logical backup of the hosted database, encrypted before it leaves the runner.
+# The file is kept as a workflow artifact for 14 days. The repo is public, so the dump is
+# always encrypted (AES-256 with BACKUP_PASSPHRASE); without the passphrase it is unreadable.
+# Restore steps: docs/OPERATIONS.md.
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "30 23 * * *" # 02:30 in Addis Ababa, before the demo database refresh
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.BACKUP_DATABASE_URL || secrets.DEMO_DATABASE_URL }}
+      BACKUP_PASSPHRASE: ${{ secrets.BACKUP_PASSPHRASE }}
+    steps:
+      - name: Skip until the database and passphrase are configured
+        id: guard
+        run: |
+          if [ -z "$DATABASE_URL" ] || [ -z "$BACKUP_PASSPHRASE" ]; then
+            echo "BACKUP_DATABASE_URL (or DEMO_DATABASE_URL) or BACKUP_PASSPHRASE is not set; nothing to do."
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          fi
+      - name: Install PostgreSQL 17 client
+        if: steps.guard.outputs.ready == 'true'
+        run: |
+          sudo apt-get install -y postgresql-common
+          sudo /usr/share/postgresql-common/pgdg/apt.postgresql.org.sh -y
+          sudo apt-get install -y postgresql-client-17
+      - name: Dump and encrypt
+        if: steps.guard.outputs.ready == 'true'
+        run: |
+          set -euo pipefail
+          name="dinkuan-$(date -u +%Y%m%dT%H%MZ).dump.gpg"
+          /usr/lib/postgresql/17/bin/pg_dump --format=custom --no-owner --no-privileges "$DATABASE_URL" \
+            | gpg --batch --yes --symmetric --cipher-algo AES256 --passphrase-fd 3 3<<<"$BACKUP_PASSPHRASE" -o "$name"
+          # A backup that can't be read back is not a backup: decrypt and list its contents.
+          gpg --batch --decrypt --passphrase-fd 3 3<<<"$BACKUP_PASSPHRASE" "$name" | /usr/lib/postgresql/17/bin/pg_restore --list > /dev/null
+          echo "BACKUP_FILE=$name" >> "$GITHUB_ENV"
+          ls -lh "$name"
+      - uses: actions/upload-artifact@v4
+        if: steps.guard.outputs.ready == 'true'
+        with:
+          name: ${{ env.BACKUP_FILE }}
+          path: ${{ env.BACKUP_FILE }}
+          retention-days: 14
+          if-no-files-found: error

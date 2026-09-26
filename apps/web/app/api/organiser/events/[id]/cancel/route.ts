@@ -11,6 +11,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const { reason } = await parseJson(req, z.object({ reason: z.string() }));
     return ok(await cancelEvent(user.id, (await params).id, reason));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

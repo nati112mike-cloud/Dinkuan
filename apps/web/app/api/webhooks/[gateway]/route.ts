@@ -14,6 +14,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ gateway
     if (res.result === "paid") drainTelegramAfterResponse();
     return ok(res);
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

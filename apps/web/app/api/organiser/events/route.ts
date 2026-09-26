@@ -12,6 +12,6 @@ export async function POST(req: Request) {
     const event = await createEvent(user.id, organiserId, input);
     return ok({ id: event.id, slug: event.slug });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

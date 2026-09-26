@@ -12,6 +12,6 @@ export async function POST(req: Request) {
     const { conversationId } = await createRequest(me.user.id, input, { campaignId: await clickedCampaign() });
     return ok({ conversationId });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

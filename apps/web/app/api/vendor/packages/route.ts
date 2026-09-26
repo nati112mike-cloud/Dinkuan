@@ -12,6 +12,6 @@ export async function PUT(req: Request) {
     const saved = await savePackages(me.user.id, packages);
     return ok({ count: saved.length });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

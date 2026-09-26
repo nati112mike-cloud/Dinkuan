@@ -14,6 +14,6 @@ export async function PATCH(req: Request) {
     if (interests) await setInterests(me.user.id, interests);
     return ok(toProfileDTO(profile));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

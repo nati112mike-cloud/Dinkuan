@@ -12,6 +12,6 @@ export async function POST(req: Request) {
     const a = await fileAppeal(user.id, input.actionId, input.text);
     return ok({ id: a.id });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

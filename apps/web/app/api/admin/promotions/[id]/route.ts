@@ -13,6 +13,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const c = await reviewCampaign(user.id, (await params).id, approve, note);
     return ok({ status: c.status });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

@@ -11,6 +11,6 @@ export async function POST(req: Request) {
     const { vendorId } = await parseJson(req, z.object({ vendorId: z.uuid() }));
     return ok({ saved: await toggleShortlist(me.user.id, vendorId) });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

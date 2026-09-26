@@ -12,6 +12,6 @@ export async function PUT(req: Request) {
     const org = await saveOrganiserApplication(user.id, input, submit);
     return ok({ id: org.id, status: org.status });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

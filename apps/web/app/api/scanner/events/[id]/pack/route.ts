@@ -12,6 +12,6 @@ export async function GET(req: Request, { params }: { params: Promise<{ id: stri
     const { id } = await params;
     return withCors(req, ok(await offlinePack(user, id)));
   } catch (e) {
-    return withCors(req, handleError(e));
+    return withCors(req, handleError(e, req));
   }
 }

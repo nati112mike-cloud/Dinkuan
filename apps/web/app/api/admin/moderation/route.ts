@@ -12,6 +12,6 @@ export async function POST(req: Request) {
     const { action, escalated } = await moderate(user.id, input);
     return ok({ id: action.id, escalated });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

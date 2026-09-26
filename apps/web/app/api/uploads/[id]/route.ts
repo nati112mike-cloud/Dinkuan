@@ -11,7 +11,7 @@ export async function GET(_req: Request, { params }: Ctx) {
     if (!me) return fail("UNAUTHENTICATED");
     return ok(await uploadStatus(me.user.id, (await params).id));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, _req);
   }
 }
 
@@ -25,6 +25,6 @@ export async function PUT(req: Request, { params }: Ctx) {
     const chunk = new Uint8Array(await req.arrayBuffer());
     return ok(await appendChunk(me.user.id, (await params).id, offset, chunk));
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

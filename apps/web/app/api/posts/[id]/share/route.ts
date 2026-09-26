@@ -12,6 +12,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const share = await sharePost(me.user.id, (await params).id, input.type, input.comment);
     return ok({ id: share.id });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

@@ -12,6 +12,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     const album = await confirmGig(me.user.id, (await params).id, approve);
     return ok({ gigStatus: album.gigStatus });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

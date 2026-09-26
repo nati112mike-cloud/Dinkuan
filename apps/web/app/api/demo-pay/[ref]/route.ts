@@ -39,6 +39,6 @@ export async function POST(req: Request, { params }: { params: Promise<{ ref: st
     if (order?.status === "paid") drainTelegramAfterResponse();
     return ok({ orderId: order?.id ?? null });
   } catch (e) {
-    return handleError(e);
+    return handleError(e, req);
   }
 }

@@ -6,6 +6,8 @@
  *   scanner   0911000002  (gate staff for both organisers)
  *   organiser 0911000003
  *   admin     0911000004
+ *   new organiser with an event in review  0911000006
+ *   organiser application waiting for admin 0911000007
  */
 import { createCipheriv, randomBytes } from "node:crypto";
 import * as ed from "@noble/ed25519";
@@ -305,6 +307,54 @@ async function main() {
       },
     });
   }
+  // Admin queues (F12-AC1) are not empty in the demo: one application and one event to review.
+  const newOwner = await user("+251911000006", "Selam Haile", ["buyer", "organiser"]);
+  const applicant = await user("+251911000007", "Yonas Girma", ["buyer", "organiser"]);
+  const newOrg =
+    (await prisma.organiser.findFirst({ where: { name: "Arat Kilo Comedy Club" } })) ??
+    (await prisma.organiser.create({
+      data: { ownerUserId: newOwner.id, name: "Arat Kilo Comedy Club", type: "business", status: "approved", tin: "0045671234", payoutMethod: "telebirr", payoutAccount: newOwner.phone },
+    }));
+  if (!(await prisma.organiser.findFirst({ where: { ownerUserId: applicant.id } }))) {
+    await prisma.organiser.create({
+      data: {
+        ownerUserId: applicant.id,
+        name: "Entoto Adventures",
+        type: "business",
+        status: "submitted",
+        submittedAt: new Date(),
+        tin: "0098761234",
+        payoutMethod: "bank",
+        payoutAccount: "CBE 1000234567890",
+      },
+    });
+  }
+  const reviewSlug = "open-mic-arat-kilo";
+  const reviewStart = addisAt(9, 19, 30);
+  const inReview = await prisma.event.findUnique({ where: { slug: reviewSlug } });
+  if (!inReview) {
+    await prisma.event.create({
+      data: {
+        slug: reviewSlug,
+        organiserId: newOrg.id,
+        titleEn: "Open Mic Night",
+        titleAm: "ክፍት መድረክ ምሽት",
+        descEn: "Ten new comedians, five minutes each. Bring friends.",
+        descAm: "አሥር አዲስ ኮሜዲያኖች፣ እያንዳንዳቸው አምስት ደቂቃ። ጓደኞችዎን ይዘው ይምጡ።",
+        category: "comedy",
+        posterUrl: `/posters/${reviewSlug}`,
+        venueId: venueIds.get("fendika")!,
+        startsAt: reviewStart,
+        endsAt: new Date(reviewStart.getTime() + 3 * 3600_000),
+        lineup: ["Selam Haile"],
+        status: "pending_review",
+        ticketTypes: { create: [{ name: "Regular", priceSantim: 200_00, capacity: 120, sortOrder: 0 }] },
+      },
+    });
+  } else if (inReview.status === "pending_review") {
+    await prisma.event.update({ where: { id: inReview.id }, data: { startsAt: reviewStart, endsAt: new Date(reviewStart.getTime() + 3 * 3600_000) } });
+  }
+
   console.info(`Seeded ${venues.length} venues, ${orgs.length} organisers, ${events.length} events. Buyer: ${buyer.phone}`);
 }
 

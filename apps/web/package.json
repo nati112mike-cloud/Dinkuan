@@ -12,6 +12,7 @@
   },
   "dependencies": {
     "@dinkuan/ads": "workspace:*",
+    "@dinkuan/bot": "workspace:*",
     "@dinkuan/core": "workspace:*",
     "@dinkuan/db": "workspace:*",
     "@dinkuan/i18n": "workspace:*",

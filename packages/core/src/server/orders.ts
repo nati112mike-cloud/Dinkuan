@@ -5,6 +5,7 @@ import { appUrl } from "./config";
 import { randomToken } from "./crypto";
 import { gatewayFor } from "./gateways";
 import { appendLedger, recordAdConversion } from "./ledger";
+import { enqueueOutbound } from "./outbox";
 import { failCampaignPayment, markCampaignPaid } from "./promotions";
 import { ensureEventSigningKey } from "./signing-keys";
 
@@ -243,6 +244,13 @@ export async function markOrderPaid(
       await appendLedger(tx, { organiserId: null, orderId, type: "fee", amount: order.feeSantim, ref: order.gatewayRef });
     }
     if (order.campaignId) await recordAdConversion(tx, order.campaignId, "ticket_sale", orderId);
+    // F7-AC3: queue ticket delivery to Telegram in the same transaction (one per order).
+    await enqueueOutbound(tx, {
+      userId: order.userId,
+      kind: "tickets_paid",
+      payload: { orderId },
+      dedupeKey: `tickets:${orderId}`,
+    });
     return "paid";
   });
 

@@ -17,6 +17,7 @@ export function CheckoutForm({
 }) {
   const t = translator(lang);
   const [gateway, setGateway] = useState<"telebirr" | "chapa">("telebirr");
+  const [sharePhone, setSharePhone] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -26,7 +27,7 @@ export function CheckoutForm({
     const res = await fetch("/api/checkout", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ eventId, items, gateway }),
+      body: JSON.stringify({ eventId, items, gateway, sharePhone }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -59,6 +60,10 @@ export function CheckoutForm({
           ))}
         </fieldset>
       )}
+      <label className="flex items-start gap-3 rounded-2xl bg-white p-3 text-sm ring-1 ring-tent-100">
+        <input type="checkbox" checked={sharePhone} onChange={(e) => setSharePhone(e.target.checked)} className="mt-0.5 h-5 w-5 shrink-0 accent-tent-600" />
+        <span>{t("checkout.sharePhone")}</span>
+      </label>
       {error && <p className="rounded-xl bg-red-50 p-3 text-sm font-semibold text-red-700">{error}</p>}
       <button
         type="button"

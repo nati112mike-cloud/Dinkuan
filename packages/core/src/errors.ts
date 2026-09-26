@@ -30,7 +30,14 @@ export type ErrorCode =
   | "COMPARE_LIMIT"
   | "TARGET_NOT_ALLOWED"
   | "CAMPAIGN_STATE"
-  | "REFUND_FAILED";
+  | "REFUND_FAILED"
+  | "ORGANISER_NOT_APPROVED"
+  | "ORGANISER_STATE"
+  | "EVENT_INCOMPLETE"
+  | "EVENT_STATE"
+  | "PRICE_LOCKED"
+  | "TYPE_HAS_SALES"
+  | "CAPACITY_BELOW_SOLD";
 
 export class DomainError extends Error {
   constructor(

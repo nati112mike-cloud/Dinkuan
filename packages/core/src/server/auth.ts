@@ -51,16 +51,33 @@ export async function verifyOtp(
     throw new DomainError("OTP_INVALID");
   }
   await prisma.otpCode.delete({ where: { phone } });
-  let user = await prisma.user.findUnique({ where: { phone } });
-  const isNew = !user;
-  if (!user) {
-    user = await prisma.user.create({ data: { phone, roles: { create: { role: "buyer" } } } });
+  const { user, isNew } = await findOrCreateUserByPhone(phone);
+  const token = await createSession(user.id, now);
+  return { token, user, isNew };
+}
+
+/** New numbers become buyers (F1-AC3). `phone` must already be normalised to E.164. */
+export async function findOrCreateUserByPhone(phone: string): Promise<{ user: User; isNew: boolean }> {
+  const existing = await prisma.user.findUnique({ where: { phone } });
+  if (existing) return { user: existing, isNew: false };
+  try {
+    const user = await prisma.user.create({ data: { phone, roles: { create: { role: "buyer" } } } });
+    return { user, isNew: true };
+  } catch (e) {
+    // Two sign-ins for the same new number at once: the other one created it.
+    const user = await prisma.user.findUnique({ where: { phone } });
+    if (user) return { user, isNew: false };
+    throw e;
   }
+}
+
+/** Starts a 30-day session and returns its token (only the hash is stored). */
+export async function createSession(userId: string, now = new Date()): Promise<string> {
   const token = randomToken();
   await prisma.session.create({
-    data: { userId: user.id, tokenHash: sha256(token), expiresAt: new Date(now.getTime() + SESSION_TTL_MS) },
+    data: { userId, tokenHash: sha256(token), expiresAt: new Date(now.getTime() + SESSION_TTL_MS) },
   });
-  return { token, user, isNew };
+  return token;
 }
 
 export async function userForSession(token: string | undefined | null, now = new Date()) {

@@ -15,6 +15,7 @@ import {
   react,
   refreshRank,
   REACTIONS,
+  report,
   setInterests,
   syncTags,
   updateProfile,
@@ -229,6 +230,13 @@ async function main() {
       await refreshRank(prisma, post.id);
     }
     console.log(`Seeded ${POSTS.length} posts from ${CREATORS.length} creators.`);
+
+    // F22 demo: a couple of items waiting in the moderation queue at /admin/moderation.
+    const target = await prisma.post.findFirst({ where: { authorId: ids.get("abel.laughs") }, orderBy: { createdAt: "desc" } });
+    if (target) {
+      await report(ids.get("hanna.t")!, { targetType: "post", targetId: target.id, reason: "harassment", details: "Making fun of my neighbourhood" });
+      await addComment(ids.get("runaddis")!, target.id, "Win free money now bit.ly/addis-prize").catch(() => undefined);
+    }
   } else {
     // Keep the demo feed fresh: move seeded posts forward so the newest is about an hour old.
     const seededAuthors = [...ids.values()];

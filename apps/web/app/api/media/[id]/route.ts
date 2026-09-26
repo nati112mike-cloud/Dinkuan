@@ -1,13 +1,21 @@
-import { blobMeta, readBlob, readBlobRange } from "@dinkuan/social";
+import { blobMeta, mediaAccess, readBlob, readBlobRange } from "@dinkuan/social";
+import { currentUser, isAdmin } from "@/lib/session";
 
 const MAX_RANGE = 2 * 1024 * 1024;
 
-/** Serves uploaded media, with byte ranges so phones can seek in videos. Media ids are unguessable. */
+/**
+ * Serves uploaded media, with byte ranges so phones can seek in videos. Media ids are unguessable,
+ * and media that isn't public yet (or was removed) is only served to its uploader and moderators.
+ * Short cache lifetimes so a removal takes effect quickly.
+ */
 export async function GET(req: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   if (!/^[0-9a-f-]{36}$/i.test(id)) return new Response(null, { status: 404 });
+  const user = await currentUser();
+  const access = await mediaAccess(id, user ? { id: user.id, admin: isAdmin(user) } : null);
+  if (access === "denied") return new Response(null, { status: 404 });
   const headers: Record<string, string> = {
-    "cache-control": "public, max-age=31536000, immutable",
+    "cache-control": access === "public" ? "public, max-age=300" : "private, no-store",
     "accept-ranges": "bytes",
   };
   const m = /^bytes=(\d*)-(\d*)$/.exec(req.headers.get("range") ?? "");

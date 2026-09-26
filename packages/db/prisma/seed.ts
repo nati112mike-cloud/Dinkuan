@@ -8,6 +8,7 @@
  *   admin     0911000004
  *   new organiser with an event in review  0911000006
  *   organiser application waiting for admin 0911000007
+ *   second moderator (for appeals)         0911000008
  */
 import { createCipheriv, randomBytes } from "node:crypto";
 import * as ed from "@noble/ed25519";
@@ -243,6 +244,8 @@ async function main() {
   const scanner = await user("+251911000002", "Gate Staff", ["buyer"]);
   const orgOwner = await user("+251911000003", "Dawit Alemu", ["buyer", "organiser"]);
   await user("+251911000004", "Dinkuan Admin", ["buyer", "admin"]);
+  // A second moderator: appeals must be decided by someone other than the one who acted (F22-AC6).
+  await user("+251911000008", "Trust & Safety", ["buyer", "admin"]);
   const orgOwner2 = await user("+251911000005", "Meron Bekele", ["buyer", "organiser"]);
 
   const orgs = [];

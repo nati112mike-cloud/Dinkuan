@@ -5,9 +5,10 @@ import { translator, type Lang, type MessageKey } from "@dinkuan/i18n";
 import { api, errorText } from "@/lib/client";
 import { Sheet } from "./Sheet";
 
-const REASONS = ["spam", "nudity", "violence", "hate", "harassment", "scam", "copyright", "other"] as const;
+// Same list as REPORT_REASONS in @dinkuan/moderation (a server-only package).
+const REASONS = ["child_safety", "threat", "hate", "nudity", "violence", "harassment", "scam", "spam", "copyright", "other"] as const;
 
-/** F22-AC3: report a post, comment or profile. */
+/** F22-AC3: report a post, comment, profile, chat message or review. */
 export function ReportSheet({
   lang,
   open,
@@ -18,11 +19,12 @@ export function ReportSheet({
   lang: Lang;
   open: boolean;
   onClose: () => void;
-  targetType: "post" | "comment" | "profile";
+  targetType: "post" | "comment" | "profile" | "message" | "review";
   targetId: string;
 }) {
   const t = translator(lang);
   const [reason, setReason] = useState<(typeof REASONS)[number] | null>(null);
+  const [details, setDetails] = useState("");
   const [state, setState] = useState<"idle" | "sending" | "done" | string>("idle");
   return (
     <Sheet open={open} onClose={onClose} title={t("report.title")}>
@@ -35,7 +37,7 @@ export function ReportSheet({
             e.preventDefault();
             if (!reason) return;
             setState("sending");
-            const r = await api("/api/reports", { body: { targetType, targetId, reason } });
+            const r = await api("/api/reports", { body: { targetType, targetId, reason, details: details.trim() || undefined } });
             setState(r.ok ? "done" : errorText(lang, r.code));
           }}
         >
@@ -45,6 +47,16 @@ export function ReportSheet({
               {t(`report.${r}` as MessageKey)}
             </label>
           ))}
+          {reason === "copyright" && <p className="px-3 text-xs text-stone-500">{t("report.copyrightHint")}</p>}
+          <textarea
+            value={details}
+            onChange={(e) => setDetails(e.target.value)}
+            maxLength={1000}
+            rows={2}
+            placeholder={t("report.details")}
+            aria-label={t("report.details")}
+            className="w-full rounded-xl border border-tent-200 p-2 text-sm"
+          />
           {state !== "idle" && state !== "sending" && <p className="text-sm text-red-600">{state}</p>}
           <button
             disabled={!reason || state === "sending"}

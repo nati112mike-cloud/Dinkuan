@@ -17,6 +17,7 @@
     "@dinkuan/db": "workspace:*",
     "@dinkuan/i18n": "workspace:*",
     "@dinkuan/marketplace": "workspace:*",
+    "@dinkuan/moderation": "workspace:*",
     "@dinkuan/payments": "workspace:*",
     "@dinkuan/social": "workspace:*",
     "next": "16.3.6",

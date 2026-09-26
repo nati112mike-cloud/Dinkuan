@@ -7,6 +7,7 @@ import { translator, type Lang, type MessageKey } from "@dinkuan/i18n";
 import { api, errorText, timeAgo } from "@/lib/client";
 import type { ChatDTO, ChatMessageDTO } from "@/lib/chat";
 import { Avatar } from "./Avatar";
+import { ReportButton } from "./ReportButton";
 
 /** F20-AC15: in-app chat between client and vendor, refreshed every few seconds. */
 export function Chat({ lang, initial }: { lang: Lang; initial: ChatDTO }) {
@@ -101,11 +102,16 @@ export function Chat({ lang, initial }: { lang: Lang; initial: ChatDTO }) {
         {convo.messages.map((m) => (
           <li key={m.id} className={`flex ${m.mine ? "justify-end" : "justify-start"}`}>
             <div className={`max-w-[80%] rounded-2xl px-3 py-2 text-sm ${m.mine ? "rounded-br-sm bg-tent-600 text-white" : "rounded-bl-sm bg-white ring-1 ring-tent-100"}`}>
-              <p className="whitespace-pre-wrap break-words">{m.body}</p>
+              {m.removed ? (
+                <p className="italic opacity-70">{t("message.removed")}</p>
+              ) : (
+                <p className="whitespace-pre-wrap break-words">{m.body}</p>
+              )}
               <p className={`mt-0.5 text-[10px] ${m.mine ? "text-tent-100" : "text-stone-400"}`}>
                 {timeAgo(m.createdAt, lang)}
                 {m.masked && ` · 🔒 ${t("chat.masked")}`}
               </p>
+              {!m.mine && !m.removed && <ReportButton lang={lang} targetType="message" targetId={m.id} label="report.message" className="text-stone-400" />}
             </div>
           </li>
         ))}

@@ -28,6 +28,11 @@ const STATUS: Partial<Record<ErrorCode, number>> = {
   PRICE_LOCKED: 409,
   TYPE_HAS_SALES: 409,
   CAPACITY_BELOW_SOLD: 409,
+  ACCOUNT_SUSPENDED: 403,
+  ACCOUNT_BANNED: 403,
+  CONTENT_FLAGGED: 422,
+  ALREADY_APPEALED: 409,
+  APPEAL_SAME_MODERATOR: 409,
 };
 
 export function fail(code: ErrorCode, message?: string) {

@@ -11,7 +11,7 @@ export async function POST(req: Request, { params }: { params: Promise<{ id: str
     if (!me) return fail("UNAUTHENTICATED");
     const { text } = await parseJson(req, z.object({ text: z.string() }));
     const m = await sendMessage(me.user.id, (await params).id, text);
-    const dto: ChatMessageDTO = { id: m.id, body: m.body, masked: m.masked, mine: true, createdAt: m.createdAt.toISOString() };
+    const dto: ChatMessageDTO = { id: m.id, body: m.body, masked: m.masked, removed: false, mine: true, createdAt: m.createdAt.toISOString() };
     return ok(dto);
   } catch (e) {
     return handleError(e);

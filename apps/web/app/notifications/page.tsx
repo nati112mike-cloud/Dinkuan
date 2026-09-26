@@ -24,15 +24,17 @@ export default async function NotificationsPage() {
       ) : (
         <ul className="space-y-2">
           {items.map((n) => {
+            // Moderation notices come from ድንኳን itself, never from a named moderator.
+            const system = n.type.startsWith("mod_") || n.type.startsWith("appeal_");
             const p = n.actor.profile;
-            const name = p?.username ?? "member";
+            const name = system ? t("notif.system") : (p?.username ?? "member");
             const href = n.href ?? (n.postId ? `/p/${n.postId}` : n.type === "follow_request" ? "/settings#requests" : `/u/${name}`);
             return (
               <li key={n.id}>
                 <Link href={href} className={`flex items-center gap-3 rounded-2xl p-3 ring-1 ring-tent-100 ${n.readAt ? "bg-white" : "bg-tent-100"}`}>
-                  <Avatar profile={{ username: name, displayName: p?.displayName || name, avatarUrl: p?.avatarUrl ?? null }} size={40} />
+                  <Avatar profile={{ username: name, displayName: system ? name : p?.displayName || name, avatarUrl: system ? null : (p?.avatarUrl ?? null) }} size={40} />
                   <p className="min-w-0 flex-1 text-sm">
-                    <span className="font-bold">@{name}</span> {t(`notif.${n.type}` as MessageKey)}{" "}
+                    <span className="font-bold">{system ? name : `@${name}`}</span> {t(`notif.${n.type}` as MessageKey)}{" "}
                     <span className="text-stone-500">· {timeAgo(n.createdAt.toISOString(), lang)}</span>
                   </p>
                 </Link>

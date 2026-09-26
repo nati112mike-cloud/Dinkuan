@@ -72,3 +72,24 @@ export async function readBlobRange(id: string, start: number, end: number) {
     SELECT substring(bytes FROM ${start + 1}::int FOR ${end - start + 1}::int) AS part FROM media_blobs WHERE id = ${id}::uuid`;
   return row?.part ?? null;
 }
+
+/**
+ * Who may fetch an uploaded file (CLAUDE.md rule 14, F22). Media on a post follows the post:
+ * while it is being screened, restricted or removed only its uploader and moderators get it.
+ * Trade licences are private to their uploader and admins. Everything else (avatars, posters,
+ * portfolio) is public. `public` may be cached briefly; `private` must not be cached at all.
+ */
+export async function mediaAccess(blobId: string, viewer: { id: string; admin: boolean } | null): Promise<"public" | "private" | "denied"> {
+  const url = mediaUrl(blobId);
+  const blob = await prisma.mediaBlob.findUnique({ where: { id: blobId }, select: { uploaderId: true } });
+  if (!blob) return "denied";
+  const privileged = !!viewer && (viewer.admin || viewer.id === blob.uploaderId);
+  const licence = await prisma.organiser.count({ where: { licenceUrl: url } });
+  if (licence > 0) return privileged ? "private" : "denied";
+  const posts = await prisma.media.findMany({
+    where: { OR: [{ url }, { thumbUrl: url }] },
+    select: { post: { select: { status: true, author: { select: { bannedAt: true } } } } },
+  });
+  if (posts.length === 0 || posts.some((m) => m.post.status === "public" && !m.post.author.bannedAt)) return "public";
+  return privileged ? "private" : "denied";
+}

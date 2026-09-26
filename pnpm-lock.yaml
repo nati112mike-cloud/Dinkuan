@@ -127,6 +127,9 @@ importers:
       '@dinkuan/marketplace':
         specifier: workspace:*
         version: link:../../packages/marketplace
+      '@dinkuan/moderation':
+        specifier: workspace:*
+        version: link:../../packages/moderation
       '@dinkuan/payments':
         specifier: workspace:*
         version: link:../../packages/payments
@@ -257,6 +260,9 @@ importers:
       '@dinkuan/db':
         specifier: workspace:*
         version: link:../db
+      '@dinkuan/moderation':
+        specifier: workspace:*
+        version: link:../moderation
       '@dinkuan/social':
         specifier: workspace:*
         version: link:../social
@@ -270,6 +276,25 @@ importers:
       tsx:
         specifier: ^4.20.0
         version: 4.23.15
+      vitest:
+        specifier: ^4.0.0
+        version: 4.1.11(@types/node@22.20.4)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15))
+
+  packages/moderation:
+    dependencies:
+      '@dinkuan/core':
+        specifier: workspace:*
+        version: link:../core
+      '@dinkuan/db':
+        specifier: workspace:*
+        version: link:../db
+      zod:
+        specifier: ^4.1.0
+        version: 4.6.5
+    devDependencies:
+      '@types/node':
+        specifier: ^22.0.0
+        version: 22.20.4
       vitest:
         specifier: ^4.0.0
         version: 4.1.11(@types/node@22.20.4)(vite@8.3.1(@types/node@22.20.4)(esbuild@0.28.2)(jiti@2.7.0)(terser@5.51.2)(tsx@4.23.15))
@@ -291,6 +316,9 @@ importers:
       '@dinkuan/db':
         specifier: workspace:*
         version: link:../db
+      '@dinkuan/moderation':
+        specifier: workspace:*
+        version: link:../moderation
       zod:
         specifier: ^4.1.0
         version: 4.6.5

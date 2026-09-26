@@ -114,13 +114,17 @@ enum PayoutStatus {
 }
 
 model User {
-  id             String   @id @default(uuid()) @db.Uuid
-  phone          String   @unique
+  id             String    @id @default(uuid()) @db.Uuid
+  phone          String    @unique
   name           String?
   email          String?
-  lang           Lang     @default(am)
-  telegramChatId String?  @unique @map("telegram_chat_id")
-  createdAt      DateTime @default(now()) @map("created_at") @db.Timestamptz
+  lang           Lang      @default(am)
+  telegramChatId String?   @unique @map("telegram_chat_id")
+  /// F22-AC5: set by a suspension. Posting, commenting, messaging and following are blocked until then.
+  suspendedUntil DateTime? @map("suspended_until") @db.Timestamptz
+  /// F22-AC5: a ban ends every session and blocks login.
+  bannedAt       DateTime? @map("banned_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   roles          UserRole[]
   sessions       Session[]
@@ -161,6 +165,12 @@ model User {
   shortlists      Shortlist[]
   reviewsWritten  Review[]         @relation("ReviewAuthor")
   campaigns       Campaign[]
+
+  moderationActions ModerationAction[] @relation("ModerationSubject")
+  moderationsMade   ModerationAction[] @relation("Moderator")
+  strikes           Strike[]
+  appeals           Appeal[]           @relation("AppealAuthor")
+  appealsReviewed   Appeal[]           @relation("AppealReviewer")
 
   @@map("users")
 }
@@ -602,6 +612,14 @@ enum NotificationType {
   event_approved
   event_rejected
   team_added
+  mod_removed
+  mod_age_restricted
+  mod_warned
+  mod_suspended
+  mod_banned
+  mod_takedown
+  appeal_upheld
+  appeal_overturned
 }
 
 model Profile {
@@ -680,6 +698,8 @@ model Post {
   eventId       String?       @map("event_id") @db.Uuid
   venueId       String?       @map("venue_id") @db.Uuid
   status        ContentStatus @default(processing)
+  /// F22-AC4: age-restricted posts are shown only to signed-in members and never in For You.
+  ageRestricted Boolean       @default(false) @map("age_restricted")
   viewCount     Int           @default(0) @map("view_count")
   reactionCount Int           @default(0) @map("reaction_count")
   commentCount  Int           @default(0) @map("comment_count")
@@ -724,6 +744,9 @@ model Media {
   post      Post      @relation(fields: [postId], references: [id], onDelete: Cascade)
 
   @@index([postId])
+  /// The media route looks up which post a blob belongs to before serving it (F22 / rule 14).
+  @@index([url])
+  @@index([thumbUrl])
   @@map("media")
 }
 
@@ -874,19 +897,101 @@ model UserInterest {
 }
 
 /// F22-AC3: report button on posts, comments and profiles.
+/// F22-AC3/AC4. A null reporter means automated screening flagged the content.
 model Report {
-  id         String   @id @default(uuid()) @db.Uuid
-  reporterId String   @map("reporter_id") @db.Uuid
-  targetType String   @map("target_type")
-  targetId   String   @map("target_id")
+  id         String            @id @default(uuid()) @db.Uuid
+  reporterId String?           @map("reporter_id") @db.Uuid
+  targetType String            @map("target_type")
+  targetId   String            @map("target_id")
+  /// Author of the reported content, so the queue can show strikes and act on the account.
+  subjectId  String?           @map("subject_id") @db.Uuid
   reason     String
+  /// 1 low · 2 medium · 3 high · 4 urgent (F22-AC7).
+  severity   Int               @default(1)
   details    String?
-  status     String   @default("open")
-  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz
-  reporter   User     @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  status     String            @default("open")
+  actionId   String?           @map("action_id") @db.Uuid
+  resolvedAt DateTime?         @map("resolved_at") @db.Timestamptz
+  createdAt  DateTime          @default(now()) @map("created_at") @db.Timestamptz
+  reporter   User?             @relation(fields: [reporterId], references: [id], onDelete: Cascade)
+  action     ModerationAction? @relation(fields: [actionId], references: [id], onDelete: SetNull)
+
+  @@unique([reporterId, targetType, targetId])
+  @@index([status, createdAt])
+  @@index([targetType, targetId])
+  @@map("reports")
+}
+
+enum ModAction {
+  remove
+  age_restrict
+  warn
+  suspend
+  ban
+  dismiss
+}
+
+enum AppealStatus {
+  open
+  upheld
+  overturned
+}
+
+/// F22-AC4: every moderator decision. Also audit-logged.
+model ModerationAction {
+  id           String    @id @default(uuid()) @db.Uuid
+  moderatorId  String    @map("moderator_id") @db.Uuid
+  targetType   String    @map("target_type")
+  targetId     String    @map("target_id")
+  subjectId    String?   @map("subject_id") @db.Uuid
+  action       ModAction
+  reason       String
+  note         String?
+  /// Content state before the action, so an overturned appeal can restore it.
+  before       Json?
+  overturnedAt DateTime? @map("overturned_at") @db.Timestamptz
+  createdAt    DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  moderator    User      @relation("Moderator", fields: [moderatorId], references: [id], onDelete: Cascade)
+  subject      User?     @relation("ModerationSubject", fields: [subjectId], references: [id], onDelete: Cascade)
+  reports      Report[]
+  strike       Strike?
+  appeal       Appeal?
+
+  @@index([subjectId, createdAt(sort: Desc)])
+  @@map("moderation_actions")
+}
+
+/// F22-AC5: three live strikes in 90 days suspend the account for 7 days.
+model Strike {
+  id        String           @id @default(uuid()) @db.Uuid
+  userId    String           @map("user_id") @db.Uuid
+  actionId  String           @unique @map("action_id") @db.Uuid
+  severe    Boolean          @default(false)
+  revokedAt DateTime?        @map("revoked_at") @db.Timestamptz
+  createdAt DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  action    ModerationAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+
+  @@index([userId, createdAt])
+  @@map("strikes")
+}
+
+/// F22-AC6: one appeal per action, decided by a different moderator.
+model Appeal {
+  id         String           @id @default(uuid()) @db.Uuid
+  actionId   String           @unique @map("action_id") @db.Uuid
+  userId     String           @map("user_id") @db.Uuid
+  text       String
+  status     AppealStatus     @default(open)
+  reviewerId String?          @map("reviewer_id") @db.Uuid
+  decidedAt  DateTime?        @map("decided_at") @db.Timestamptz
+  createdAt  DateTime         @default(now()) @map("created_at") @db.Timestamptz
+  action     ModerationAction @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  user       User             @relation("AppealAuthor", fields: [userId], references: [id], onDelete: Cascade)
+  reviewer   User?            @relation("AppealReviewer", fields: [reviewerId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt])
-  @@map("reports")
+  @@map("appeals")
 }
 
 model Notification {
@@ -1137,6 +1242,8 @@ model Message {
   body           String
   originalBody   String       @map("original_body")
   masked         Boolean      @default(false)
+  /// F22-AC4: removed by a moderator; the body is no longer shown.
+  removedAt      DateTime?    @map("removed_at") @db.Timestamptz
   createdAt      DateTime     @default(now()) @map("created_at") @db.Timestamptz
   conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
   sender         User         @relation(fields: [senderId], references: [id], onDelete: Cascade)
@@ -1158,6 +1265,8 @@ model Review {
   communication Int
   body          String
   vendorReply   String?       @map("vendor_reply")
+  /// F22-AC4: removed by a moderator; hidden and left out of the vendor's rating.
+  removedAt     DateTime?     @map("removed_at") @db.Timestamptz
   createdAt     DateTime      @default(now()) @map("created_at") @db.Timestamptz
   client        User          @relation("ReviewAuthor", fields: [clientId], references: [id], onDelete: Cascade)
   vendor        VendorProfile @relation(fields: [vendorId], references: [userId], onDelete: Cascade)

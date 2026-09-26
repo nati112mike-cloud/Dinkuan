@@ -51,6 +51,7 @@ test("F21: organiser buys Event Spotlight, admin approves, it shows labelled and
   await visitor.getByLabel("6-digit code").fill("123456");
   await visitor.getByRole("button", { name: "Log in" }).click();
   await visitor.getByLabel(/Your name/).fill("Abebe Fan");
+  await visitor.getByLabel(/community guidelines/).check();
   await visitor.getByRole("button", { name: "Continue" }).click();
   await visitor.getByRole("button", { name: /^Pay / }).click();
   await approveDemoPayment(visitor);
